@@ -63,15 +63,12 @@ class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
   Future<String?> _getUserRole() async {
-    // This is a placeholder — soon we’ll fetch the role from Firestore
-    // You can store the user role (admin/client) in Firestore under "users" collection
-    // Example:
-    //   users/{uid}/role: 'admin' or 'client'
-    //
-    // For now, return a hardcoded 'admin' or 'client' for testing.
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
-    return 'client'; // change to 'admin' for testing
+
+    // 🧠 TODO: fetch role dynamically from Firestore later
+    // For now, hardcode for testing:
+    return 'client'; // or 'admin' to test admin redirection
   }
 
   @override
@@ -79,24 +76,32 @@ class AuthWrapper extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // 🔸 User not logged in
-        if (!snapshot.hasData) return const LoginScreen();
+        // 🟤 If not logged in → show LoginScreen
+        if (!snapshot.hasData) {
+          return const LoginScreen();
+        }
 
-        // 🔸 User logged in → check role
+        // 🟤 If logged in → check role
         return FutureBuilder<String?>(
           future: _getUserRole(),
           builder: (context, roleSnapshot) {
             if (roleSnapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
-                body: Center(child: CircularProgressIndicator(color: Colors.brown)),
+                body: Center(
+                  child: CircularProgressIndicator(color: Colors.brown),
+                ),
               );
             }
 
             final role = roleSnapshot.data;
+
             if (role == 'admin') {
               return const AdminScreen();
-            } else {
+            } else if (role == 'client') {
               return const HomeScreen();
+            } else {
+              // if role is unknown → fallback to login
+              return const LoginScreen();
             }
           },
         );
