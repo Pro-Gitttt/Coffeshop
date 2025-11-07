@@ -1,113 +1,183 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// 📝 Register user
-  Future<void> registerUser(
+  // Only mobile GoogleSignIn needs clientId; web uses FirebaseAuth popup
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId: kIsWeb
+        ? null
+        : 'YOUR_ANDROID_IOS_CLIENT_ID.apps.googleusercontent.com',
+  );
+
+  /// REGISTER USER
+  Future<bool> registerUser(
     BuildContext context, {
     required String email,
     required String password,
     required String name,
   }) async {
     try {
-      // 1️⃣ Create account in Firebase Auth
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+          email: email, password: password);
 
-      // 2️⃣ Save user data to Firestore
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'name': name,
         'email': email,
-        'createdAt': DateTime.now(),
         'role': 'client',
+        'createdAt': DateTime.now(),
       });
 
-      // 3️⃣ Send welcome email (using EmailJS API)
-      await sendWelcomeEmail(name, email);
-
-      // 4️⃣ Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('🎉 Registration successful! Check your email.')),
-      );
-
-      // 5️⃣ Redirect to Login
-      Navigator.pushReplacementNamed(context, '/login');
-    } on FirebaseAuthException catch (e) {
-      String message = 'An error occurred';
-      if (e.code == 'email-already-in-use') {
-        message = 'Email is already in use.';
-      } else if (e.code == 'weak-password') {
-        message = 'Password is too weak.';
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration successful!')),
+        );
+        Navigator.pushReplacementNamed(context, '/login');
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Registration error: $e')),
-      );
+
+      return true;
+    } on FirebaseAuthException catch (e) {
+      if (context.mounted) {
+        String message = 'Registration error';
+        if (e.code == 'email-already-in-use') message = 'Email already in use';
+        if (e.code == 'weak-password') message = 'Password too weak';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      }
+      return false;
     }
   }
 
-  /// 💌 Send welcome email via EmailJS (client-side)
-  Future<void> sendWelcomeEmail(String name, String email) async {
-    const String serviceId = 'service_ab75res'; // replace with your EmailJS service ID
-    const String templateId = 'template_lsx8fp4'; // replace with your EmailJS template ID
-    const String publicKey = '3ICQUlxq0LapNCqZh'; // replace with your EmailJS public key
-
-    final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'service_id': serviceId,
-        'template_id': templateId,
-        'user_id': publicKey,
-        'template_params': {
-          'to_name': name,
-          'to_email': email,
-        },
-      }),
-    );
-
-    if (response.statusCode != 200) {
-      debugPrint('⚠️ Failed to send email: ${response.body}');
-    }
-  }
-
-  /// 🔓 Login user
-  Future<void> loginUser(BuildContext context,
-      {required String email, required String password}) async {
+  /// LOGIN USER
+  Future<bool> loginUser(
+    BuildContext context, {
+    required String email,
+    required String password,
+  }) async {
     try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      final credential =
+          await _auth.signInWithEmailAndPassword(email: email, password: password);
 
-      // Navigate based on role
-      final userDoc =
-          await _firestore.collection('users').where('email', isEqualTo: email).get();
+      final doc = await _firestore.collection('users').doc(credential.user!.uid).get();
+      final role = doc['role'];
 
-      final role = userDoc.docs.first['role'];
-      if (role == 'admin') {
-        Navigator.pushReplacementNamed(context, '/admin');
-      } else {
-        Navigator.pushReplacementNamed(context, '/home');
+      if (context.mounted) {
+        if (role == 'admin') {
+          Navigator.pushReplacementNamed(context, '/admin');
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
       }
+
+      return true;
     } on FirebaseAuthException catch (e) {
-      String message = 'Login failed';
-      if (e.code == 'user-not-found') message = 'No user found with that email.';
-      if (e.code == 'wrong-password') message = 'Incorrect password.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      if (context.mounted) {
+        String message = 'Login failed';
+        if (e.code == 'user-not-found') message = 'No user found';
+        if (e.code == 'wrong-password') message = 'Incorrect password';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      }
+      return false;
     }
   }
 
-  /// 🚪 Logout
-  Future<void> logout(BuildContext context) async {
-    await _auth.signOut();
-    Navigator.pushReplacementNamed(context, '/login');
+Future<void> logout(BuildContext context) async {
+  await _auth.signOut();
+
+  if (!kIsWeb) {
+    await _googleSignIn.signOut();
+    try {
+      await FacebookAuth.instance.logOut();
+    } catch (_) {
+      // ignore if user didn't login with FB
+    }
+  }
+
+  if (context.mounted) Navigator.pushReplacementNamed(context, '/login');
+}
+
+  /// GOOGLE SIGN-IN (Web & Mobile)
+  Future<void> signInWithGoogle(BuildContext context) async {
+    try {
+      UserCredential userCredential;
+
+      if (kIsWeb) {
+        // Web: Firebase popup login
+        userCredential = await _auth.signInWithPopup(GoogleAuthProvider());
+      } else {
+        // Mobile login flow
+        final googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) return; // User cancelled
+        final googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        userCredential = await _auth.signInWithCredential(credential);
+      }
+
+      await _saveUserToFirestore(userCredential.user!);
+      if (context.mounted) Navigator.pushReplacementNamed(context, '/home');
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Google Sign-In error: $e')));
+      }
+    }
+  }
+
+  Future<void> signInWithFacebook(BuildContext context) async {
+  try {
+    // Web: already initialized in main.dart
+    final result = await FacebookAuth.instance.login();
+
+    if (result.status == LoginStatus.success) {
+      final accessToken = result.accessToken!;
+      final credential = FacebookAuthProvider.credential(accessToken.tokenString);
+      final userCredential = await _auth.signInWithCredential(credential);
+
+      await _saveUserToFirestore(userCredential.user!);
+
+      if (context.mounted) Navigator.pushReplacementNamed(context, '/home');
+    } else if (result.status == LoginStatus.cancelled) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Facebook login cancelled')));
+      }
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Facebook login failed: ${result.message}')));
+      }
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Facebook login error: $e')));
+    }
+  }
+}
+
+  /// SAVE USER TO FIRESTORE
+  Future<void> _saveUserToFirestore(User user) async {
+    final userDoc = _firestore.collection('users').doc(user.uid);
+    final docSnapshot = await userDoc.get();
+
+    if (!docSnapshot.exists) {
+      await userDoc.set({
+        'name': user.displayName ?? '',
+        'email': user.email ?? '',
+        'photoURL': user.photoURL ?? '',
+        'role': 'client',
+        'createdAt': DateTime.now(),
+      });
+    }
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:js' as js;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 
@@ -34,6 +36,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = false);
   }
 
+  /// Web-safe Facebook login
+  Future<void> signInWithFacebookWebSafe(BuildContext context) async {
+    if (kIsWeb) {
+      while (js.context['fbLoaded'] != true) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+    }
+    await _authService.signInWithFacebook(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,7 +54,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             elevation: 6,
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -53,12 +66,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     const Text(
                       "Create Account",
-                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 10),
                     const Text("Join us and start your journey ☕",
                         style: TextStyle(color: Colors.grey)),
-
                     const SizedBox(height: 30),
                     TextFormField(
                       controller: _nameController,
@@ -103,9 +116,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ? 'Password must be at least 6 characters'
                           : null,
                     ),
-
                     const SizedBox(height: 25),
-
                     _isLoading
                         ? const CircularProgressIndicator()
                         : ElevatedButton(
@@ -119,12 +130,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             onPressed: _register,
                             child: const Text(
                               "Register",
-                              style: TextStyle(fontSize: 18, color: Colors.white),
+                              style:
+                                  TextStyle(fontSize: 18, color: Colors.white),
                             ),
                           ),
-
+                    const SizedBox(height: 25),
+                    const Text("Or sign up with",
+                        style: TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: Image.asset('assets/google.png', height: 40),
+                          onPressed: () =>
+                              _authService.signInWithGoogle(context),
+                        ),
+                        const SizedBox(width: 20),
+                        IconButton(
+                          icon: Image.asset('assets/facebook.png', height: 40),
+                          onPressed: () =>
+                              signInWithFacebookWebSafe(context), // Updated
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 20),
-
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

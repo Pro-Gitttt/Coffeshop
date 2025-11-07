@@ -1,3 +1,5 @@
+import 'dart:js' as js;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 
@@ -31,6 +33,15 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
   }
 
+  Future<void> signInWithFacebookWebSafe(BuildContext context) async {
+    if (kIsWeb) {
+      while (js.context['fbLoaded'] != true) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+    }
+    await _authService.signInWithFacebook(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,7 +50,8 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             elevation: 6,
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -50,12 +62,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const Text(
                       "Welcome Back 👋",
-                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 10),
                     const Text("Login to your account",
                         style: TextStyle(color: Colors.grey)),
-
                     const SizedBox(height: 30),
                     TextFormField(
                       controller: _emailController,
@@ -88,7 +100,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       validator: (value) =>
                           value!.isEmpty ? 'Enter your password' : null,
                     ),
-
                     const SizedBox(height: 25),
                     _isLoading
                         ? const CircularProgressIndicator()
@@ -106,7 +117,25 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: TextStyle(fontSize: 18, color: Colors.white),
                             ),
                           ),
-
+                    const SizedBox(height: 25),
+                    const Text("Or sign in with", style: TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: Image.asset('assets/google.png', height: 40),
+                          onPressed: () =>
+                              _authService.signInWithGoogle(context),
+                        ),
+                        const SizedBox(width: 20),
+                        IconButton(
+                          icon: Image.asset('assets/facebook.png', height: 40),
+                          onPressed: () =>
+                              signInWithFacebookWebSafe(context), // Updated
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
