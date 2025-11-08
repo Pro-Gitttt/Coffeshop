@@ -1,7 +1,8 @@
-import 'dart:js' as js;
+import 'package:coffee_shop_app/utils/fb_loader_stub.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,9 +34,9 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
   }
 
-  Future<void> signInWithFacebookWebSafe(BuildContext context) async {
+  Future<void> signInWithFacebookWebSafe() async {
     if (kIsWeb) {
-      while (js.context['fbLoaded'] != true) {
+      while (!isFbLoaded()) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
     }
@@ -131,8 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(width: 20),
                         IconButton(
                           icon: Image.asset('assets/facebook.png', height: 40),
-                          onPressed: () =>
-                              signInWithFacebookWebSafe(context), // Updated
+                          onPressed: signInWithFacebookWebSafe,
                         ),
                       ],
                     ),

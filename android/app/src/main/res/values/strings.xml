@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App name -->
+    <string name="app_name">coffee_shop_app</string>
+
+    <!-- Facebook App ID -->
+    <string name="facebook_app_id">1423685606028436</string>
+
+    <!-- Optional: Default URL scheme for Facebook login -->
+    <string name="fb_login_protocol_scheme">fb1423685606028436</string>
+
+</resources>
