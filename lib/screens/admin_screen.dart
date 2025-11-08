@@ -1,9 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
-import '../services/cloudinary_service.dart';
 import 'admin_menu_screen.dart'; // ✅ Add Menu Screen
 import 'char.dart'; // ✅ Statistics Screen
 

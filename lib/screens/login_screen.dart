@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 
-
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -43,6 +42,112 @@ class _LoginScreenState extends State<LoginScreen> {
     await _authService.signInWithFacebook(context);
   }
 
+  // 🔹 Modern forgot password popup (centered)
+  void _showForgotPasswordDialog(BuildContext context) {
+    final TextEditingController emailController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16,
+            right: 16,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  offset: const Offset(0, -3),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.brown.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const Text(
+                  "Reset Password 🔐",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "Enter your email and we’ll send you a reset link.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: "Email address",
+                    prefixIcon: Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.brown.shade300),
+                        ),
+                        child: const Text("Cancel"),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.brown,
+                        ),
+                        onPressed: () async {
+                          final email = emailController.text.trim();
+                          if (email.isEmpty || !email.contains('@')) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Please enter a valid email")),
+                            );
+                            return;
+                          }
+                          Navigator.pop(context);
+                          await _authService.resetPassword(email, context);
+                        },
+                        child: const Text("Send"),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,8 +156,9 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Card(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             elevation: 6,
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -63,13 +169,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const Text(
                       "Welcome Back 👋",
-                      style:
-                          TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 10),
-                    const Text("Login to your account",
-                        style: TextStyle(color: Colors.grey)),
+                    const Text(
+                      "Login to your account",
+                      style: TextStyle(color: Colors.grey),
+                    ),
                     const SizedBox(height: 30),
+
+                    // Email
                     TextFormField(
                       controller: _emailController,
                       decoration: const InputDecoration(
@@ -77,11 +189,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: 'Email',
                         border: OutlineInputBorder(),
                       ),
-                      validator: (value) => value!.contains('@')
-                          ? null
-                          : 'Enter a valid email',
+                      validator: (value) =>
+                          value!.contains('@') ? null : 'Enter a valid email',
                     ),
                     const SizedBox(height: 16),
+
+                    // Password
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -101,7 +214,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       validator: (value) =>
                           value!.isEmpty ? 'Enter your password' : null,
                     ),
+
                     const SizedBox(height: 25),
+
+                    // Login button
                     _isLoading
                         ? const CircularProgressIndicator()
                         : ElevatedButton(
@@ -115,11 +231,32 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: _login,
                             child: const Text(
                               "Login",
-                              style: TextStyle(fontSize: 18, color: Colors.white),
+                              style: TextStyle(
+                                  fontSize: 18, color: Colors.white),
                             ),
                           ),
+
+                    // Forgot password (centered & lower)
+                    const SizedBox(height: 15),
+                    GestureDetector(
+                      onTap: () => _showForgotPasswordDialog(context),
+                      child: const Text(
+                        "Forgot Password?",
+                        style: TextStyle(
+                          color: Colors.brown,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+
                     const SizedBox(height: 25),
-                    const Text("Or sign in with", style: TextStyle(color: Colors.grey)),
+
+                    // Social login
+                    const Text(
+                      "Or sign in with",
+                      style: TextStyle(color: Colors.grey),
+                    ),
                     const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -136,14 +273,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 20),
+
+                    // Register
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Text("Don't have an account? "),
                         TextButton(
-                          onPressed: () =>
-                              Navigator.pushReplacementNamed(context, '/register'),
+                          onPressed: () => Navigator.pushReplacementNamed(
+                              context, '/register'),
                           child: const Text(
                             "Register",
                             style: TextStyle(fontWeight: FontWeight.bold),

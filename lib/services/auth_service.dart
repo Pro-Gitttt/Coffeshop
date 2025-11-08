@@ -9,49 +9,97 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Only mobile GoogleSignIn needs clientId; web uses FirebaseAuth popup
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: kIsWeb
-        ? null
-        : 'YOUR_ANDROID_IOS_CLIENT_ID.apps.googleusercontent.com',
+    clientId: kIsWeb ? null : 'YOUR_ANDROID_IOS_CLIENT_ID.apps.googleusercontent.com',
   );
 
-  /// REGISTER USER
-  Future<bool> registerUser(
+  /// REGISTER USER WITH PHONE VERIFICATION
+  Future<void> registerUserWithPhone(
     BuildContext context, {
+    required String name,
     required String email,
     required String password,
-    required String name,
+    required String phone,
   }) async {
     try {
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-          email: email, password: password);
-
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'name': name,
-        'email': email,
-        'role': 'client',
-        'createdAt': DateTime.now(),
-      });
-
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phone,
+        timeout: const Duration(seconds: 60),
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          // Auto verification (rare on Android)
+          final userCredential = await _auth.signInWithCredential(credential);
+          await _saveUserToFirestore(userCredential.user!, name: name, email: email, phone: phone);
+          if (context.mounted) Navigator.pushReplacementNamed(context, '/home');
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Phone verification failed: ${e.message}')),
+            );
+          }
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          _showOtpDialog(context, verificationId, name: name, email: email, password: password, phone: phone);
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {},
+      );
+    } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration successful!')),
+          SnackBar(content: Text('Error sending SMS: $e')),
         );
-        Navigator.pushReplacementNamed(context, '/login');
       }
-
-      return true;
-    } on FirebaseAuthException catch (e) {
-      if (context.mounted) {
-        String message = 'Registration error';
-        if (e.code == 'email-already-in-use') message = 'Email already in use';
-        if (e.code == 'weak-password') message = 'Password too weak';
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(message)));
-      }
-      return false;
     }
+  }
+
+  void _showOtpDialog(BuildContext context, String verificationId,
+      {required String name, required String email, required String password, required String phone}) {
+    final TextEditingController otpController = TextEditingController();
+
+    showDialog(
+      barrierDismissible: false,
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Text("Enter OTP"),
+        content: TextField(
+          controller: otpController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: "OTP",
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.brown),
+            onPressed: () async {
+              final otp = otpController.text.trim();
+              if (otp.isEmpty) return;
+              try {
+                final credential = PhoneAuthProvider.credential(
+                    verificationId: verificationId, smsCode: otp);
+
+                // Crée un compte email/password et lie le téléphone
+                final userCredential =
+                    await _auth.createUserWithEmailAndPassword(email: email, password: password);
+
+                await userCredential.user!.linkWithCredential(credential);
+
+                await _saveUserToFirestore(userCredential.user!, name: name, email: email, phone: phone);
+
+                if (context.mounted) Navigator.pushReplacementNamed(context, '/home');
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('OTP verification failed: $e')),
+                );
+              }
+            },
+            child: const Text("Verify"),
+          ),
+        ],
+      ),
+    );
   }
 
   /// LOGIN USER
@@ -74,47 +122,58 @@ class AuthService {
           Navigator.pushReplacementNamed(context, '/home');
         }
       }
-
       return true;
     } on FirebaseAuthException catch (e) {
       if (context.mounted) {
         String message = 'Login failed';
         if (e.code == 'user-not-found') message = 'No user found';
         if (e.code == 'wrong-password') message = 'Incorrect password';
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       }
       return false;
     }
   }
 
-Future<void> logout(BuildContext context) async {
-  await _auth.signOut();
-
-  if (!kIsWeb) {
-    await _googleSignIn.signOut();
+  /// RESET PASSWORD
+  Future<void> resetPassword(String email, BuildContext context) async {
     try {
-      await FacebookAuth.instance.logOut();
-    } catch (_) {
-      // ignore if user didn't login with FB
+      await _auth.sendPasswordResetEmail(email: email);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password reset email sent!')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (context.mounted) {
+        String message = 'Error sending password reset email.';
+        if (e.code == 'user-not-found') message = 'No user found with that email.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
     }
   }
 
-  if (context.mounted) Navigator.pushReplacementNamed(context, '/login');
-}
+  /// LOGOUT USER
+  Future<void> logout(BuildContext context) async {
+    await _auth.signOut();
+    if (!kIsWeb) {
+      await _googleSignIn.signOut();
+      try {
+        await FacebookAuth.instance.logOut();
+      } catch (_) {}
+    }
+    if (context.mounted) Navigator.pushReplacementNamed(context, '/login');
+  }
 
-  /// GOOGLE SIGN-IN (Web & Mobile)
+  /// GOOGLE SIGN-IN
   Future<void> signInWithGoogle(BuildContext context) async {
     try {
       UserCredential userCredential;
 
       if (kIsWeb) {
-        // Web: Firebase popup login
         userCredential = await _auth.signInWithPopup(GoogleAuthProvider());
       } else {
-        // Mobile login flow
         final googleUser = await _googleSignIn.signIn();
-        if (googleUser == null) return; // User cancelled
+        if (googleUser == null) return;
         final googleAuth = await googleUser.authentication;
         final credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
@@ -127,53 +186,51 @@ Future<void> logout(BuildContext context) async {
       if (context.mounted) Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Google Sign-In error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google Sign-In error: $e')),
+        );
       }
     }
   }
 
+  /// FACEBOOK SIGN-IN
   Future<void> signInWithFacebook(BuildContext context) async {
-  try {
-    // Web: already initialized in main.dart
-    final result = await FacebookAuth.instance.login();
-
-    if (result.status == LoginStatus.success) {
-      final accessToken = result.accessToken!;
-      final credential = FacebookAuthProvider.credential(accessToken.tokenString);
-      final userCredential = await _auth.signInWithCredential(credential);
-
-      await _saveUserToFirestore(userCredential.user!);
-
-      if (context.mounted) Navigator.pushReplacementNamed(context, '/home');
-    } else if (result.status == LoginStatus.cancelled) {
+    try {
+      final result = await FacebookAuth.instance.login();
+      if (result.status == LoginStatus.success) {
+        final accessToken = result.accessToken!;
+        final credential = FacebookAuthProvider.credential(accessToken.tokenString);
+        final userCredential = await _auth.signInWithCredential(credential);
+        await _saveUserToFirestore(userCredential.user!);
+        if (context.mounted) Navigator.pushReplacementNamed(context, '/home');
+      } else if (result.status == LoginStatus.cancelled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Facebook login cancelled')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Facebook login failed: ${result.message}')),
+        );
+      }
+    } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Facebook login cancelled')));
+          SnackBar(content: Text('Facebook login error: $e')),
+        );
       }
-    } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Facebook login failed: ${result.message}')));
-      }
-    }
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Facebook login error: $e')));
     }
   }
-}
 
   /// SAVE USER TO FIRESTORE
-  Future<void> _saveUserToFirestore(User user) async {
+  Future<void> _saveUserToFirestore(User user, {String? name, String? email, String? phone}) async {
     final userDoc = _firestore.collection('users').doc(user.uid);
     final docSnapshot = await userDoc.get();
 
     if (!docSnapshot.exists) {
       await userDoc.set({
-        'name': user.displayName ?? '',
-        'email': user.email ?? '',
+        'name': name ?? user.displayName ?? '',
+        'email': email ?? user.email ?? '',
+        'phone': phone ?? '',
         'photoURL': user.photoURL ?? '',
         'role': 'client',
         'createdAt': DateTime.now(),
