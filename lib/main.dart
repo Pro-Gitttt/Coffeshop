@@ -37,7 +37,7 @@ import 'features/user/screens/cart_screen.dart';
 import 'features/user/screens/order_status_screen.dart';
 import 'core/utils/route_helper.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Suppress font loading errors silently
@@ -50,17 +50,26 @@ void main() async {
     FlutterError.presentError(details);
   };
 
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // Initialize Firebase safely
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+  } on FirebaseException catch (e) {
+    if (e.code == 'duplicate-app') {
+      debugPrint('Firebase already initialized, skipping...');
+    } else {
+      rethrow;
+    }
+  }
 
   // Set Firebase Auth language
   await fb_auth.FirebaseAuth.instance.setLanguageCode('en');
 
-  // Configure Firestore for better connectivity and offline support
-  final firestore = FirebaseFirestore.instance;
-  firestore.settings = const Settings(
+  // Configure Firestore for offline persistence
+  FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
@@ -75,9 +84,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider<FirebaseAuthService>(
-          create: (_) => FirebaseAuthService(),
-        ),
+        Provider<FirebaseAuthService>(create: (_) => FirebaseAuthService()),
         ProxyProvider<FirebaseAuthService, AuthRepository>(
           update: (_, authService, __) => AuthRepository(authService),
         ),
@@ -87,9 +94,7 @@ class MyApp extends StatelessWidget {
           update: (context, authService, previous) =>
               previous ?? AuthProvider(authService),
         ),
-        ChangeNotifierProvider<CartProvider>(
-          create: (_) => CartProvider(),
-        ),
+        ChangeNotifierProvider<CartProvider>(create: (_) => CartProvider()),
       ],
       child: MaterialApp(
         title: 'CoffeeStock',
@@ -159,23 +164,19 @@ class _SplashWrapperState extends State<SplashWrapper> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Save reference to AuthProvider for safe use in dispose()
     _authProvider ??= context.read<AuthProvider>();
   }
 
   @override
   void initState() {
     super.initState();
-    // Defer provider access to avoid blocking build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final authProvider = _authProvider ?? context.read<AuthProvider>();
       _authProvider ??= authProvider;
 
-      // Listen for auth changes and navigate based on role
       authProvider.addListener(_handleAuthChange);
 
-      // Also check immediately if user is already authenticated
       if (authProvider.isAuthenticated && !_navigated) {
         _handleAuthChange();
       }
@@ -202,11 +203,10 @@ class _SplashWrapperState extends State<SplashWrapper> {
     }
 
     if (!authProvider.isAuthenticated) {
-      _navigated = false; // allow navigation after login
+      _navigated = false;
       return const LoginScreen();
     }
 
-    // Placeholder while navigating
     return const Scaffold(
       body: Center(child: CircularProgressIndicator()),
     );
@@ -214,7 +214,6 @@ class _SplashWrapperState extends State<SplashWrapper> {
 
   @override
   void dispose() {
-    // Use stored reference instead of context to avoid deactivated widget error
     _authProvider?.removeListener(_handleAuthChange);
     super.dispose();
   }

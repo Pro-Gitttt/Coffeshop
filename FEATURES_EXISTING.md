@@ -7,12 +7,12 @@
 ## Roles & Access
 - Admin: Full access, menu and inventory management, user roles
 - Employee: Orders dashboard to process orders and update status
-- Customer: Browse menu, add to cart, place orders, track order status
-- Role-based navigation on login (admin → dashboard, employee → orders, customer → menu)
+- client: Browse menu, add to cart, place orders, track order status
+- Role-based navigation on login (admin → dashboard, employee → orders, client → menu)
 
 ---
 
-## Customer Features
+## client Features
 - Menu & Product
   - Browse available menu items (realtime)
   - Search by name/description
@@ -74,14 +74,14 @@
 - Push notifications (FCM) for order updates and low-stock alerts
 - Cloud Functions for secure, atomic stock decrement and notifications (currently client-side)
 - Payments integration (Stripe/PayPal)
-- Customer order history screen (using existing `getMyOrders()` service)
+- client order history screen (using existing `getMyOrders()` service)
 - Admin analytics UI (service exists; surface in dashboard)
 - Feedback moderation/filter UI for admin
 
 ---
 
 ## Key Screens & Routes
-- Customer: `/user/menu`, `/user/product`, `/user/cart`, `/user/order-status`
+- client: `/user/menu`, `/user/product`, `/user/cart`, `/user/order-status`
 - Employee: `/employee/orders`
 - Admin: `/admin/dashboard`, `/admin/menu`, `/admin/menu/edit`, stock & user management screens
 - Auth: `/login`, `/signup`, profile screen

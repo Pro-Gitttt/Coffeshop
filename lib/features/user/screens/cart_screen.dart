@@ -28,7 +28,7 @@ class _CartScreenState extends State<CartScreen> {
       final service = FirestoreService();
       final order = orders.OrderModel(
         id: '',
-        customerId: auth.currentUser!.uid,
+        clientId: auth.currentUser!.uid,
         items: cart.items,
         totalPrice: cart.totalPrice,
         status: orders.OrderStatus.pending,
@@ -83,49 +83,49 @@ class _CartScreenState extends State<CartScreen> {
             Padding(
               padding: Responsive.responsivePadding(context),
               child: Column(
-              children: [
-                Row(children: [
-                  const Text('Order Type: '),
-                  const SizedBox(width: 12),
-                  DropdownButton<String>(
-                    value: _orderType,
-                    items: const [
-                      DropdownMenuItem(
-                          value: 'Dine-in', child: Text('Dine-in')),
-                      DropdownMenuItem(
-                          value: 'Takeaway', child: Text('Takeaway')),
+                children: [
+                  Row(children: [
+                    const Text('Order Type: '),
+                    const SizedBox(width: 12),
+                    DropdownButton<String>(
+                      value: _orderType,
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'Dine-in', child: Text('Dine-in')),
+                        DropdownMenuItem(
+                            value: 'Takeaway', child: Text('Takeaway')),
+                      ],
+                      onChanged: (v) =>
+                          setState(() => _orderType = v ?? 'Takeaway'),
+                    )
+                  ]),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Text('Total:'),
+                      const Spacer(),
+                      Text('${cart.totalPrice.toStringAsFixed(2)} TND',
+                          style: Theme.of(context).textTheme.titleMedium),
                     ],
-                    onChanged: (v) =>
-                        setState(() => _orderType = v ?? 'Takeaway'),
-                  )
-                ]),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Text('Total:'),
-                    const Spacer(),
-                    Text('${cart.totalPrice.toStringAsFixed(2)} TND',
-                        style: Theme.of(context).textTheme.titleMedium),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed:
-                        _loading || cart.items.isEmpty ? null : _checkout,
-                    icon: const Icon(Icons.payment),
-                    label: _loading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Place Order'),
                   ),
-                )
-              ],
-            ),
-          )
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed:
+                          _loading || cart.items.isEmpty ? null : _checkout,
+                      icon: const Icon(Icons.payment),
+                      label: _loading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Text('Place Order'),
+                    ),
+                  )
+                ],
+              ),
+            )
           ],
         ),
       ),

@@ -8,7 +8,7 @@ Snapshot of the current Coffee Stock implementation. Each feature is marked as *
 
 1. [Overview](#overview)
 2. [Roles](#roles)
-3. [Customer (User) Features](#customer-user-features)
+3. [client (User) Features](#client-user-features)
 4. [Employee Features](#employee-features)
 5. [Admin Features](#admin-features)
 6. [Core Technical Architecture](#core-technical-architecture)
@@ -34,11 +34,11 @@ The app is built with Flutter + Firebase, using Provider for state management, F
 
 - ✅ **Admin** — full access; menu, stock, analytics, user management
 - ✅ **Employee** — handles live orders, can view stock and history
-- ✅ **Customer** — browses menu, orders, leaves feedback
+- ✅ **client** — browses menu, orders, leaves feedback
 
 ---
 
-## Customer (User) Features
+## client (User) Features
 
 | Feature | Status | Notes |
 | --- | --- | --- |
@@ -55,7 +55,7 @@ The app is built with Flutter + Firebase, using Provider for state management, F
 | Payments (cash) | ✅ Done | Flow assumes in-person payment |
 | Payments (Stripe/PayPal) | 🔜 Planned | Online payments not integrated |
 | Feedback submission | ✅ Done | Ratings and comments stored; average recalculated |
-| Customer profile editing | 🔜 Planned | Profile screen scaffolding exists |
+| client profile editing | 🔜 Planned | Profile screen scaffolding exists |
 | Order history & reordering | 🔜 Planned | `getMyOrders()` ready; UI pending |
 
 ---
@@ -65,7 +65,7 @@ The app is built with Flutter + Firebase, using Provider for state management, F
 | Feature | Status | Notes |
 | --- | --- | --- |
 | Orders dashboard | ✅ Done | Live stream + status updates |
-| Customer notifications | 🔜 Planned | Push notifications pending backend |
+| client notifications | 🔜 Planned | Push notifications pending backend |
 | Print / ticket view | 🔜 Planned | No printing integration |
 | Stock overview | ✅ Done | Shared stock screen via drawer |
 | Low-stock alerts | ✅ Done | Threshold indicator and badges |
@@ -97,7 +97,7 @@ The app is built with Flutter + Firebase, using Provider for state management, F
 | Layer | Status | Notes |
 | --- | --- | --- |
 | Firebase Auth (email/password) | ✅ Done | Includes password reset; Google sign-in planned |
-| Roles (`admin`, `employee`, `customer`) | ✅ Done | Role-aware routing & drawer |
+| Roles (`admin`, `employee`, `client`) | ✅ Done | Role-aware routing & drawer |
 | Firestore (realtime) | ✅ Done | Collections: users, menuItems, orders, feedbacks, stock, history, shortageReports, orderForecasts |
 | Firebase Storage | ✅ Partial | Used for stock images; menu images pending |
 | Cloud Functions / Edge Functions | 🔜 Planned | Consider for stock decrement & notifications |
@@ -114,7 +114,7 @@ Collections currently deployed:
 - `users`: uid, email, username, role, createdAt
 - `menuItems`: name, description, price (TND), category, images[], available, rating, recipe[]
 - `stock`: quantity, unite, shortageThreshold, misAJourLe
-- `orders`: customerId, items[{menuItemId, quantity, options}], totalPrice, status, orderType, createdAt, updatedAt
+- `orders`: clientId, items[{menuItemId, quantity, options}], totalPrice, status, orderType, createdAt, updatedAt
 - `feedbacks`: userId, menuItemId?, rating, comment, createdAt
 - `history`: inventory history entries with delta, userId, email, timestamps
 - `shortageReports`: productId, comment, resolved flag
@@ -139,13 +139,13 @@ Collections currently deployed:
 - ✅ Define detailed product data model (recipes, ratings, options)
 - ✅ Implement authentication & role-based routing
 - ✅ Implement menu browsing and product pages
-- ✅ Implement cart and order flow (customer)
+- ✅ Implement cart and order flow (client)
 - ✅ Implement orders dashboard (employee)
 - ✅ Implement inventory linkage to menu recipes (auto stock decrement)
 - ✅ Implement feedback & rating system
 - ✅ Export / reporting (stock CSV/PDF)
 - 🔜 Google Sign-In + social auth
-- 🔜 Customer order history UI & profile editing
+- 🔜 client order history UI & profile editing
 - 🔜 Push notifications & Cloud Functions (order & shortage alerts)
 - 🔜 Online payments integration (Stripe/PayPal)
 - 🔜 Admin analytics dashboard UI
@@ -163,7 +163,7 @@ Collections currently deployed:
 
 1. [Overview](#overview)
 2. [Roles](#roles)
-3. [Customer (User) Features](#customer-user-features)
+3. [client (User) Features](#client-user-features)
 4. [Employee (Barista / Waiter) Features](#employee-features)
 5. [Admin (Manager / Owner) Features](#admin-features)
 6. [Core Technical Architecture](#core-technical-architecture)
@@ -189,11 +189,11 @@ Use it as the spec for a Flutter + Firebase (or Supabase) implementation. Update
 
 * **Admin** — manager / owner (full access)
 * **Employee** — barista / waiter (order handling, stock reporting)
-* **Customer** — app user who places orders and leaves feedback
+* **client** — app user who places orders and leaves feedback
 
 ---
 
-## Customer (User) Features
+## client (User) Features
 
 * **Home / Menu**
 
@@ -236,7 +236,7 @@ Use it as the spec for a Flutter + Firebase (or Supabase) implementation. Update
 
   * View new orders in real time
   * Update order status (Preparing → Ready → Completed)
-  * Notify customers when orders are ready
+  * Notify clients when orders are ready
   * Print / view order tickets
 
 * **Stock Overview & Reporting**
@@ -278,7 +278,7 @@ Use it as the spec for a Flutter + Firebase (or Supabase) implementation. Update
 
 * **Feedback & Support**
 
-  * View and filter customer feedback
+  * View and filter client feedback
   * Respond to feedback (optional)
   * Generate satisfaction / feedback reports
 
@@ -288,7 +288,7 @@ Use it as the spec for a Flutter + Firebase (or Supabase) implementation. Update
 
 * **Authentication**: Firebase Auth or Supabase Auth
 
-  * Roles: `admin`, `employee`, `customer`
+  * Roles: `admin`, `employee`, `client`
 * **Realtime DB**: Firestore (or Supabase Realtime)
 * **Storage**: Cloud Storage for images
 * **Serverless functions** (Cloud Functions / Edge Functions) for:
@@ -312,7 +312,7 @@ Use it as the spec for a Flutter + Firebase (or Supabase) implementation. Update
   * `id` (uid)
   * `name`
   * `email`
-  * `role` (admin | employee | customer)
+  * `role` (admin | employee | client)
   * `photoUrl`
   * `createdAt`
 
@@ -340,7 +340,7 @@ Use it as the spec for a Flutter + Firebase (or Supabase) implementation. Update
 * `orders` (document per order)
 
   * `id`
-  * `customerId`
+  * `clientId`
   * `items` (array of {menuItemId, quantity, options})
   * `totalPrice`
   * `status` (Pending, Preparing, Ready, Completed, Cancelled)
@@ -382,7 +382,7 @@ Use it as the spec for a Flutter + Firebase (or Supabase) implementation. Update
 * [ ] Define detailed product data model (images, options, recipes)
 * [ ] Implement authentication & role-based routing
 * [ ] Implement menu browsing and product pages
-* [ ] Implement cart and order flow (customer)
+* [ ] Implement cart and order flow (client)
 * [ ] Implement orders dashboard (employee)
 * [ ] Implement inventory linkage to menu recipes
 * [ ] Implement push notifications and serverless functions

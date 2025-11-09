@@ -37,11 +37,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       try {
         final repo = context.read<AuthRepository>();
-        final displayName = _displayNameController.text.trim().isEmpty 
-            ? null 
+        final displayName = _displayNameController.text.trim().isEmpty
+            ? null
             : _displayNameController.text.trim();
         final Result result = await repo.signUp(
-          _emailController.text.trim(), 
+          _emailController.text.trim(),
           _passwordController.text,
           displayName: displayName,
         );
@@ -61,11 +61,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
             if (role != null) {
               final target = RouteHelper.getRouteForRole(role);
               if (!mounted) return;
-              Navigator.pushNamedAndRemoveUntil(context, target, (route) => false);
+              Navigator.pushNamedAndRemoveUntil(
+                  context, target, (route) => false);
             } else {
-              // Fallback to customer route if role is null
+              // Fallback to client route if role is null
               if (!mounted) return;
-              Navigator.pushNamedAndRemoveUntil(context, '/user/menu', (route) => false);
+              Navigator.pushNamedAndRemoveUntil(
+                  context, '/user/menu', (route) => false);
             }
           }
         } else {
@@ -101,7 +103,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        title: Text('Create Account', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimary)),
+        title: Text('Create Account',
+            style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onPrimary)),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
       ),
@@ -115,7 +120,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 24),
-                  
+
                   // Display Name field
                   TextFormField(
                     controller: _displayNameController,
@@ -137,11 +142,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Email field
                   TextFormField(
                     controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email)),
+                    decoration: const InputDecoration(
+                        labelText: 'Email', prefixIcon: Icon(Icons.email)),
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -154,7 +160,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Password field
                   TextFormField(
                     controller: _passwordController,
@@ -163,7 +169,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       prefixIcon: const Icon(Icons.lock),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
                         onPressed: () {
                           setState(() => _obscurePassword = !_obscurePassword);
@@ -182,7 +190,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Confirm password field
                   TextFormField(
                     controller: _confirmPasswordController,
@@ -191,10 +199,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                          _obscureConfirmPassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
                         onPressed: () {
-                          setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                          setState(() => _obscureConfirmPassword =
+                              !_obscureConfirmPassword);
                         },
                       ),
                     ),
@@ -210,11 +221,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     },
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Sign up button
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleSignUp,
-                    style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                    style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16)),
                     child: _isLoading
                         ? const SizedBox(
                             height: 20,
@@ -223,16 +235,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               strokeWidth: 2,
                             ),
                           )
-                        : Text('Create Account', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onPrimary)),
+                        : Text('Create Account',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onPrimary)),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Login link
                   TextButton(
                     onPressed: () {
                       Navigator.pop(context);
                     },
-                    child: Text('Already have an account? Sign in', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w600)),
+                    child: Text('Already have an account? Sign in',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),
@@ -243,4 +261,3 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 }
-

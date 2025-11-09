@@ -41,9 +41,11 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final complaint = ModalRoute.of(context)!.settings.arguments as ComplaintModel;
+    final complaint =
+        ModalRoute.of(context)!.settings.arguments as ComplaintModel;
     final theme = Theme.of(context);
-    final route = ModalRoute.of(context)?.settings.name ?? '/user/complaint-detail';
+    final route =
+        ModalRoute.of(context)?.settings.name ?? '/user/complaint-detail';
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
@@ -56,7 +58,7 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
         children: [
           // Complaint Info Card
           _ComplaintInfoCard(complaint: complaint),
-          
+
           // Messages Section
           Expanded(
             child: StreamBuilder<List<ComplaintMessageModel>>(
@@ -68,8 +70,9 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
 
                 if (snapshot.hasError) {
                   final error = snapshot.error.toString();
-                  final isIndexError = error.contains('index') || error.contains('failed-precondition');
-                  
+                  final isIndexError = error.contains('index') ||
+                      error.contains('failed-precondition');
+
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
@@ -98,7 +101,8 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
                                 ? 'Please create the required Firestore index. The error message below contains a link to create it.'
                                 : error,
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.7),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -107,12 +111,14 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
                             ElevatedButton.icon(
                               onPressed: () {
                                 // Extract URL from error if possible
-                                final urlMatch = RegExp(r'https://[^\s]+').firstMatch(error);
+                                final urlMatch =
+                                    RegExp(r'https://[^\s]+').firstMatch(error);
                                 if (urlMatch != null) {
                                   // Note: In a real app, you'd use url_launcher package
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text('Please check the error message for the Firebase console link'),
+                                      content: Text(
+                                          'Please check the error message for the Firebase console link'),
                                       duration: const Duration(seconds: 5),
                                     ),
                                   );
@@ -134,7 +140,8 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
                 if (messages.isNotEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) async {
                     try {
-                      await _firestoreService.markComplaintMessagesAsRead(complaint.id);
+                      await _firestoreService
+                          .markComplaintMessagesAsRead(complaint.id);
                     } catch (e) {
                       // Silently handle errors in marking as read - not critical
                       debugPrint('Error marking messages as read: $e');
@@ -157,20 +164,23 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
                         Icon(
                           Icons.message_outlined,
                           size: 64,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.4),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'No messages yet',
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Start a conversation about this complaint',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -297,9 +307,11 @@ class _ComplaintInfoCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(complaint.status).withValues(alpha: 0.2),
+                    color: _getStatusColor(complaint.status)
+                        .withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -338,9 +350,11 @@ class _ComplaintInfoCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getPriorityColor(complaint.priority).withValues(alpha: 0.2),
+                    color: _getPriorityColor(complaint.priority)
+                        .withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -489,8 +503,10 @@ class _MessageBubble extends StatelessWidget {
                         dateFormat.format(message.createdAt),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: isCurrentUser
-                              ? theme.colorScheme.onPrimary.withValues(alpha: 0.7)
-                              : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                              ? theme.colorScheme.onPrimary
+                                  .withValues(alpha: 0.7)
+                              : theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.6),
                           fontSize: 11,
                         ),
                       ),
@@ -499,7 +515,8 @@ class _MessageBubble extends StatelessWidget {
                         Icon(
                           Icons.done_all,
                           size: 14,
-                          color: theme.colorScheme.onPrimary.withValues(alpha: 0.7),
+                          color: theme.colorScheme.onPrimary
+                              .withValues(alpha: 0.7),
                         ),
                       ],
                     ],
@@ -535,7 +552,7 @@ class _MessageBubble extends StatelessWidget {
         return Colors.purple;
       case 'employee':
         return Colors.blue;
-      case 'customer':
+      case 'client':
         return Colors.green;
       default:
         return Colors.grey;
@@ -620,4 +637,3 @@ class _MessageInput extends StatelessWidget {
     );
   }
 }
-

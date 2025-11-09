@@ -17,7 +17,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _currentUser != null;
   bool get isAdmin => _currentUser?.role == 'admin';
   bool get isEmployee => _currentUser?.role == 'employee';
-  bool get isCustomer => _currentUser?.role == 'customer';
+  bool get isclient => _currentUser?.role == 'client';
 
   void _init() {
     // Start in loading state until we process the initial auth status
@@ -56,26 +56,29 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('  - UID: ${user.uid}');
       debugPrint('  - Email: ${user.email}');
       debugPrint('═══════════════════════════════════════════════════════');
-      
+
       _isLoading = true;
       notifyListeners();
 
       try {
-        debugPrint('[AuthProvider] Step 1: Getting user data from Firestore...');
+        debugPrint(
+            '[AuthProvider] Step 1: Getting user data from Firestore...');
         _currentUser = await _authService.getUserData(user.uid);
-        
+
         // If user doc doesn't exist yet (e.g., first login), ensure it's created
         if (_currentUser == null) {
-          debugPrint('[AuthProvider] ⚠️ User document not found, creating it...');
+          debugPrint(
+              '[AuthProvider] ⚠️ User document not found, creating it...');
           _currentUser = await _authService.ensureCurrentUserDocument();
           // Fallback: attempt one more read in case of eventual consistency
           if (_currentUser == null) {
-            debugPrint('[AuthProvider] Still no user document after ensure, retrying...');
+            debugPrint(
+                '[AuthProvider] Still no user document after ensure, retrying...');
             await Future.delayed(const Duration(milliseconds: 500));
             _currentUser = await _authService.getUserData(user.uid);
           }
         }
-        
+
         if (_currentUser != null) {
           debugPrint('[AuthProvider] ✅ User data loaded successfully');
           debugPrint('  - UID: ${_currentUser!.uid}');
@@ -83,7 +86,8 @@ class AuthProvider extends ChangeNotifier {
           debugPrint('  - DisplayName: ${_currentUser!.displayName}');
           debugPrint('  - Role: ${_currentUser!.role}');
         } else {
-          debugPrint('[AuthProvider] ⚠️ User data is still null after all attempts');
+          debugPrint(
+              '[AuthProvider] ⚠️ User data is still null after all attempts');
         }
       } catch (e, stackTrace) {
         // Log error to aid debugging without breaking UI
@@ -94,9 +98,11 @@ class AuthProvider extends ChangeNotifier {
         try {
           debugPrint('[AuthProvider] Attempting to create user document...');
           _currentUser = await _authService.ensureCurrentUserDocument();
-          debugPrint('[AuthProvider] User document created: ${_currentUser?.email}');
+          debugPrint(
+              '[AuthProvider] User document created: ${_currentUser?.email}');
         } catch (createError) {
-          debugPrint('[AuthProvider] Failed to create user document: $createError');
+          debugPrint(
+              '[AuthProvider] Failed to create user document: $createError');
           // Fallback: create basic user model from Firebase Auth user
           _currentUser = UserModel(
             uid: user.uid,
@@ -104,7 +110,7 @@ class AuthProvider extends ChangeNotifier {
             displayName: user.displayName,
             phoneNumber: user.phoneNumber,
             photoUrl: user.photoURL,
-            role: 'customer', // Default role
+            role: 'client', // Default role
             createdAt: DateTime.now(),
           );
           debugPrint('[AuthProvider] Created fallback UserModel');
@@ -129,4 +135,3 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
-

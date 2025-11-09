@@ -6,7 +6,7 @@ class UserModel {
   final String? displayName;
   final String? phoneNumber;
   final String? photoUrl;
-  final String role; // "admin" | "customer" | "employee"
+  final String role; // "admin" | "client" | "employee"
   final DateTime createdAt;
 
   const UserModel({
@@ -23,17 +23,17 @@ class UserModel {
     final rawRole = (data['role'] as String?)?.toLowerCase().trim();
     String normalizedRole;
     if (rawRole == null || rawRole.isEmpty) {
-      normalizedRole = 'customer';
+      normalizedRole = 'client';
     } else if (rawRole == 'client' || rawRole == 'user') {
-      // Map legacy "user" and "client" to "customer"
-      normalizedRole = 'customer';
+      // Map legacy "user" and "client" to "client"
+      normalizedRole = 'client';
     } else {
       normalizedRole = rawRole;
     }
 
     // Support migration from username to displayName
-    final displayName = (data['displayName'] as String?)?.trim() ?? 
-                       (data['username'] as String?)?.trim();
+    final displayName = (data['displayName'] as String?)?.trim() ??
+        (data['username'] as String?)?.trim();
 
     return UserModel(
       uid: id,
@@ -85,4 +85,3 @@ class UserModel {
     );
   }
 }
-

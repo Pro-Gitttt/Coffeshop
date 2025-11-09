@@ -112,7 +112,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         return Colors.orange;
       case 'employee':
         return Colors.green;
-      case 'customer':
+      case 'client':
       default:
         return Colors.blue;
     }
@@ -124,9 +124,9 @@ class _ProfileScreenState extends State<ProfileScreen>
         return 'Administrator';
       case 'employee':
         return 'Employee';
-      case 'customer':
+      case 'client':
       default:
-        return 'Customer';
+        return 'client';
     }
   }
 
@@ -136,7 +136,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         return Icons.admin_panel_settings;
       case 'employee':
         return Icons.coffee;
-      case 'customer':
+      case 'client':
       default:
         return Icons.person;
     }

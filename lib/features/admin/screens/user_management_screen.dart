@@ -40,10 +40,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
     final userRole = currentUser.role.toLowerCase();
     final isAdmin = userRole == 'admin';
-    final isCustomer = userRole == 'customer';
+    final isclient = userRole == 'client';
 
-    // Redirect customers
-    if (isCustomer) {
+    // Redirect clients
+    if (isclient) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           final navigator = Navigator.maybeOf(context, rootNavigator: true);
@@ -64,15 +64,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         title: isAdmin ? 'User Management' : 'View Users',
         currentRoute: route,
       ),
-      floatingActionButton: isAdmin
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.pushNamed(context, '/admin/add-employee');
-              },
-              icon: const Icon(Icons.person_add),
-              label: const Text('Add Employee'),
-            )
-          : null,
       body: StreamBuilder<List<UserModel>>(
         stream: FirestoreService().getAllUsers(),
         builder: (context, snapshot) {
@@ -89,13 +80,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
           return Column(
             children: [
+              _buildHeaderSection(context, theme, users),
               _buildSearchAndFilters(context, theme),
-              _buildStatistics(context, theme, users),
               Expanded(
                 child: filteredUsers.isEmpty
                     ? _buildEmptyState(context, theme)
                     : _buildUserList(
-                        context, theme, filteredUsers, currentUser, isAdmin),
+                        context, theme, filteredUsers, currentUser),
               ),
             ],
           );
@@ -119,14 +110,149 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }).toList();
   }
 
+  Widget _buildHeaderSection(
+      BuildContext context, ThemeData theme, List<UserModel> users) {
+    final stats = {
+      'total': users.length,
+      'admin':
+          users.where((u) => u.role.toLowerCase().trim() == 'admin').length,
+      'client':
+          users.where((u) => u.role.toLowerCase().trim() == 'client').length,
+    };
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal:
+            Responsive.responsiveSpacing(context, mobile: 24, tablet: 32),
+        vertical: Responsive.responsiveSpacing(context, mobile: 20, tablet: 24),
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.primary.withOpacity(0.05),
+            theme.colorScheme.primary.withOpacity(0.02),
+          ],
+        ),
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outline.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Responsive.responsiveContainer(
+        context,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'User Overview',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            SizedBox(height: Responsive.responsiveSpacing(context, mobile: 8)),
+            Text(
+              'Manage and view all system users',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+            SizedBox(height: Responsive.responsiveSpacing(context, mobile: 20)),
+            _buildStatsGrid(context, theme, stats),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsGrid(
+      BuildContext context, ThemeData theme, Map<String, int> stats) {
+    return Responsive.isMobile(context)
+        ? Column(
+            children: [
+              _StatCard(
+                icon: Icons.people_alt_outlined,
+                label: 'Total Users',
+                value: stats['total']!.toString(),
+                color: theme.colorScheme.primary,
+                theme: theme,
+              ),
+              SizedBox(
+                  height: Responsive.responsiveSpacing(context, mobile: 12)),
+              _StatCard(
+                icon: Icons.admin_panel_settings_outlined,
+                label: 'Administrators',
+                value: stats['admin']!.toString(),
+                color: Colors.orange,
+                theme: theme,
+              ),
+              SizedBox(
+                  height: Responsive.responsiveSpacing(context, mobile: 12)),
+              _StatCard(
+                icon: Icons.person_outline,
+                label: 'Clients',
+                value: stats['client']!.toString(),
+                color: Colors.blue,
+                theme: theme,
+              ),
+            ],
+          )
+        : Row(
+            children: [
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.people_alt_outlined,
+                  label: 'Total Users',
+                  value: stats['total']!.toString(),
+                  color: theme.colorScheme.primary,
+                  theme: theme,
+                ),
+              ),
+              SizedBox(
+                  width: Responsive.responsiveSpacing(context,
+                      mobile: 16, tablet: 20)),
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.admin_panel_settings_outlined,
+                  label: 'Administrators',
+                  value: stats['admin']!.toString(),
+                  color: Colors.orange,
+                  theme: theme,
+                ),
+              ),
+              SizedBox(
+                  width: Responsive.responsiveSpacing(context,
+                      mobile: 16, tablet: 20)),
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.person_outline,
+                  label: 'Clients',
+                  value: stats['client']!.toString(),
+                  color: Colors.blue,
+                  theme: theme,
+                ),
+              ),
+            ],
+          );
+  }
+
   Widget _buildSearchAndFilters(BuildContext context, ThemeData theme) {
     return Container(
-      padding: Responsive.responsivePadding(context),
+      padding: EdgeInsets.symmetric(
+        horizontal:
+            Responsive.responsiveSpacing(context, mobile: 24, tablet: 32),
+        vertical: Responsive.responsiveSpacing(context, mobile: 20, tablet: 24),
+      ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         border: Border(
           bottom: BorderSide(
-            color: theme.colorScheme.outline.withValues(alpha: 0.1),
+            color: theme.colorScheme.outline.withOpacity(0.1),
+            width: 1,
           ),
         ),
       ),
@@ -135,60 +261,95 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(
-              controller: _searchController,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: 'Search by name or email',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {});
-                        },
-                      )
-                    : null,
-                isDense: true,
-                filled: true,
-                fillColor: theme.colorScheme.surfaceContainerHighest,
+            // Search Field
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.shadow.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Search users by name or email...',
+                  prefixIcon: Icon(Icons.search,
+                      color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Icons.clear,
+                              color:
+                                  theme.colorScheme.onSurface.withOpacity(0.5)),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: theme.colorScheme.surfaceContainerHighest,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: Responsive.responsiveSpacing(context,
+                        mobile: 16, tablet: 18),
+                  ),
+                ),
               ),
             ),
             SizedBox(
-              height:
-                  Responsive.responsiveSpacing(context, mobile: 12, tablet: 16),
-            ),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+                height: Responsive.responsiveSpacing(context,
+                    mobile: 20, tablet: 24)),
+
+            // Filter Chips
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _FilterChip(
-                  label: 'All',
-                  value: 'all',
-                  selected: _roleFilter == 'all',
-                  onSelected: () => setState(() => _roleFilter = 'all'),
+                Text(
+                  'Filter by Role:',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface.withOpacity(0.8),
+                  ),
                 ),
-                _FilterChip(
-                  label: 'Admin',
-                  value: 'admin',
-                  selected: _roleFilter == 'admin',
-                  onSelected: () => setState(() => _roleFilter = 'admin'),
-                  color: Colors.orange,
-                ),
-                _FilterChip(
-                  label: 'Employee',
-                  value: 'employee',
-                  selected: _roleFilter == 'employee',
-                  onSelected: () => setState(() => _roleFilter = 'employee'),
-                  color: Colors.green,
-                ),
-                _FilterChip(
-                  label: 'Customer',
-                  value: 'customer',
-                  selected: _roleFilter == 'customer',
-                  onSelected: () => setState(() => _roleFilter = 'customer'),
-                  color: Colors.blue,
+                SizedBox(
+                    height: Responsive.responsiveSpacing(context, mobile: 12)),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _FilterChip(
+                      label: 'All Users',
+                      value: 'all',
+                      selected: _roleFilter == 'all',
+                      onSelected: () => setState(() => _roleFilter = 'all'),
+                      icon: Icons.people_outline,
+                    ),
+                    _FilterChip(
+                      label: 'Admins',
+                      value: 'admin',
+                      selected: _roleFilter == 'admin',
+                      onSelected: () => setState(() => _roleFilter = 'admin'),
+                      icon: Icons.admin_panel_settings_outlined,
+                      color: Colors.orange,
+                    ),
+                    _FilterChip(
+                      label: 'Clients',
+                      value: 'client',
+                      selected: _roleFilter == 'client',
+                      onSelected: () => setState(() => _roleFilter = 'client'),
+                      icon: Icons.person_outline,
+                      color: Colors.blue,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -198,165 +359,53 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-  Widget _buildStatistics(
-    BuildContext context,
-    ThemeData theme,
-    List<UserModel> users,
-  ) {
-    final stats = {
-      'total': users.length,
-      'admin': users.where((u) => u.role.toLowerCase().trim() == 'admin').length,
-      'employee': users.where((u) => u.role.toLowerCase().trim() == 'employee').length,
-      'customer': users.where((u) => u.role.toLowerCase().trim() == 'customer').length,
-    };
-
-    return Container(
-      padding: Responsive.responsivePadding(context),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: 0.05),
-        border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.outline.withValues(alpha: 0.1),
-          ),
-        ),
-      ),
-      child: Responsive.responsiveContainer(
-        context,
-        child: Responsive.isMobile(context)
-            ? Column(
-                children: [
-                  _StatCard(
-                    icon: Icons.people,
-                    label: 'Total Users',
-                    value: stats['total']!.toString(),
-                    color: theme.colorScheme.primary,
-                    theme: theme,
-                  ),
-                  SizedBox(
-                    height: Responsive.responsiveSpacing(context, mobile: 12),
-                  ),
-                  _StatCard(
-                    icon: Icons.admin_panel_settings,
-                    label: 'Admin',
-                    value: stats['admin']!.toString(),
-                    color: Colors.orange,
-                    theme: theme,
-                  ),
-                  SizedBox(
-                    height: Responsive.responsiveSpacing(context, mobile: 12),
-                  ),
-                  _StatCard(
-                    icon: Icons.coffee,
-                    label: 'Employee',
-                    value: stats['employee']!.toString(),
-                    color: Colors.green,
-                    theme: theme,
-                  ),
-                  SizedBox(
-                    height: Responsive.responsiveSpacing(context, mobile: 12),
-                  ),
-                  _StatCard(
-                    icon: Icons.person,
-                    label: 'Customer',
-                    value: stats['customer']!.toString(),
-                    color: Colors.blue,
-                    theme: theme,
-                  ),
-                ],
-              )
-            : Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.people,
-                      label: 'Total Users',
-                      value: stats['total']!.toString(),
-                      color: theme.colorScheme.primary,
-                      theme: theme,
-                    ),
-                  ),
-                  SizedBox(
-                    width: Responsive.responsiveSpacing(context,
-                        mobile: 12, tablet: 16),
-                  ),
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.admin_panel_settings,
-                      label: 'Admin',
-                      value: stats['admin']!.toString(),
-                      color: Colors.orange,
-                      theme: theme,
-                    ),
-                  ),
-                  SizedBox(
-                    width: Responsive.responsiveSpacing(context,
-                        mobile: 12, tablet: 16),
-                  ),
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.coffee,
-                      label: 'Employee',
-                      value: stats['employee']!.toString(),
-                      color: Colors.green,
-                      theme: theme,
-                    ),
-                  ),
-                  SizedBox(
-                    width: Responsive.responsiveSpacing(context,
-                        mobile: 12, tablet: 16),
-                  ),
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.person,
-                      label: 'Customer',
-                      value: stats['customer']!.toString(),
-                      color: Colors.blue,
-                      theme: theme,
-                    ),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState(
-    BuildContext context,
-    ThemeData theme,
-    String error,
-  ) {
+  Widget _buildErrorState(BuildContext context, ThemeData theme, String error) {
     return Center(
       child: Padding(
         padding: Responsive.responsivePadding(context),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: theme.colorScheme.error,
+            Container(
+              padding: EdgeInsets.all(
+                  Responsive.responsiveSpacing(context, mobile: 24)),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.errorContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.error_outline,
+                size: 64,
+                color: theme.colorScheme.error,
+              ),
             ),
             SizedBox(height: Responsive.responsiveSpacing(context, mobile: 24)),
             Text(
-              'Error Loading Users',
+              'Unable to Load Users',
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.error,
               ),
             ),
-            SizedBox(height: Responsive.responsiveSpacing(context, mobile: 8)),
+            SizedBox(height: Responsive.responsiveSpacing(context, mobile: 12)),
             Text(
               error,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: Responsive.responsiveSpacing(context, mobile: 24)),
-            ElevatedButton.icon(
+            SizedBox(height: Responsive.responsiveSpacing(context, mobile: 32)),
+            FilledButton.icon(
               onPressed: () => setState(() {}),
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: const Text('Try Again'),
+              style: FilledButton.styleFrom(
+                padding: EdgeInsets.symmetric(
+                  horizontal: Responsive.responsiveSpacing(context, mobile: 24),
+                  vertical: Responsive.responsiveSpacing(context, mobile: 16),
+                ),
+              ),
             ),
           ],
         ),
@@ -371,24 +420,32 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.people_outline,
-              size: 80,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+            Container(
+              padding: EdgeInsets.all(
+                  Responsive.responsiveSpacing(context, mobile: 24)),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.search_off,
+                size: 64,
+                color: theme.colorScheme.onSurface.withOpacity(0.4),
+              ),
             ),
             SizedBox(height: Responsive.responsiveSpacing(context, mobile: 24)),
             Text(
               'No Users Found',
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
-            SizedBox(height: Responsive.responsiveSpacing(context, mobile: 8)),
+            SizedBox(height: Responsive.responsiveSpacing(context, mobile: 12)),
             Text(
-              'Try adjusting your search or filter criteria',
+              'Try adjusting your search or filter criteria to find users',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                color: theme.colorScheme.onSurface.withOpacity(0.5),
               ),
               textAlign: TextAlign.center,
             ),
@@ -403,20 +460,23 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     ThemeData theme,
     List<UserModel> users,
     UserModel currentUser,
-    bool isAdmin,
   ) {
-    return Responsive.responsiveContainer(
-      context,
-      child: ListView.builder(
-        padding: Responsive.responsivePadding(context),
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal:
+            Responsive.responsiveSpacing(context, mobile: 24, tablet: 32),
+        vertical: Responsive.responsiveSpacing(context, mobile: 16, tablet: 20),
+      ),
+      child: ListView.separated(
         itemCount: users.length,
+        separatorBuilder: (context, index) => SizedBox(
+          height: Responsive.responsiveSpacing(context, mobile: 12, tablet: 16),
+        ),
         itemBuilder: (context, index) {
           return _UserCard(
             key: ValueKey('user_${users[index].uid}'),
             user: users[index],
             currentUserId: currentUser.uid,
-            canEdit: isAdmin,
-            canDelete: isAdmin,
           );
         },
       ),
@@ -424,37 +484,21 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 }
 
-class _UserCard extends StatefulWidget {
+class _UserCard extends StatelessWidget {
   final UserModel user;
   final String currentUserId;
-  final bool canEdit;
-  final bool canDelete;
 
   const _UserCard({
     super.key,
     required this.user,
     required this.currentUserId,
-    this.canEdit = false,
-    this.canDelete = false,
   });
-
-  @override
-  State<_UserCard> createState() => _UserCardState();
-}
-
-class _UserCardState extends State<_UserCard> {
-  UserModel get user => widget.user;
-  String get currentUserId => widget.currentUserId;
-  bool get canEdit => widget.canEdit;
-  bool get canDelete => widget.canDelete;
 
   Color _getRoleColor(String role) {
     switch (role) {
       case 'admin':
         return Colors.orange;
-      case 'employee':
-        return Colors.green;
-      case 'customer':
+      case 'client':
       default:
         return Colors.blue;
     }
@@ -464,9 +508,7 @@ class _UserCardState extends State<_UserCard> {
     switch (role) {
       case 'admin':
         return Icons.admin_panel_settings;
-      case 'employee':
-        return Icons.coffee;
-      case 'customer':
+      case 'client':
       default:
         return Icons.person;
     }
@@ -475,251 +517,11 @@ class _UserCardState extends State<_UserCard> {
   String _getRoleLabel(String role) {
     switch (role) {
       case 'admin':
-        return 'Admin';
-      case 'employee':
-        return 'Employee';
-      case 'customer':
+        return 'Administrator';
+      case 'client':
       default:
-        return 'Customer';
+        return 'Client';
     }
-  }
-
-  Future<void> _showRoleSelectionDialog() async {
-    if (!mounted || !canEdit) return;
-
-    final selectedRole = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => _RoleSelectionDialog(
-        user: user,
-        currentRole: user.role,
-      ),
-    );
-
-    if (selectedRole == null || !mounted) return;
-    if (selectedRole == user.role.toLowerCase()) return;
-
-    await _updateUserRole(selectedRole);
-  }
-
-  Future<void> _updateUserRole(String newRole) async {
-    if (!mounted) return;
-
-    _showLoadingDialog();
-
-    try {
-      await FirestoreService().updateUserRole(user.uid, newRole);
-      
-      if (!mounted) return;
-      _hideLoadingDialog();
-
-      // If changing current user's role, reload their data
-      if (user.uid == currentUserId && mounted) {
-        final authProvider = context.read<AuthProvider>();
-        await authProvider.loadUserData();
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Role updated successfully to ${_getRoleLabel(newRole)}'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      _hideLoadingDialog();
-      
-      String errorMessage = 'Failed to update role';
-      final errorString = e.toString().toLowerCase();
-      
-      if (errorString.contains('permission-denied') || errorString.contains('permission denied')) {
-        errorMessage = 'Permission denied. Only administrators can change roles.';
-      } else if (errorString.contains('not-found') || errorString.contains('not found')) {
-        errorMessage = 'User not found in database.';
-      } else if (errorString.contains('firestore') || errorString.contains('network')) {
-        errorMessage = 'Network error. Please check your connection and try again.';
-      } else {
-        errorMessage = 'Error: ${e.toString()}';
-      }
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _deleteUser() async {
-    if (!mounted || !canDelete) return;
-
-    if (user.uid == currentUserId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You cannot delete your own account'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete User'),
-        content: Text(
-          'Are you sure you want to delete ${user.displayName ?? user.email}? This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !mounted) return;
-
-    try {
-      await FirestoreService().deleteUser(user.uid);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('User deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  void _showLoadingDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Updating...'),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _hideLoadingDialog() {
-    Navigator.of(context, rootNavigator: true).pop();
-  }
-
-  void _showCustomMenu(BuildContext context, ThemeData theme) {
-    final isCurrentUserLocal = user.uid == currentUserId;
-    final canEditLocal = canEdit;
-    final canDeleteLocal = canDelete;
-    
-    final RenderBox? overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox?;
-    if (overlay == null || !mounted) return;
-
-    final RenderBox? button = context.findRenderObject() as RenderBox?;
-    if (button == null || !mounted) return;
-
-    final RelativeRect position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero),
-            ancestor: overlay),
-      ),
-      Offset.zero & overlay.size,
-    );
-
-    showMenu<String>(
-      context: context,
-      position: position,
-      items: [
-        if (canEditLocal && !isCurrentUserLocal)
-          PopupMenuItem<String>(
-            value: 'change_role',
-            child: const Row(
-              children: [
-                Icon(Icons.swap_horiz, size: 20),
-                SizedBox(width: 12),
-                Text('Change Role'),
-              ],
-            ),
-          ),
-        if (canDeleteLocal && !isCurrentUserLocal)
-          PopupMenuItem<String>(
-            value: 'delete',
-            child: const Row(
-              children: [
-                Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                SizedBox(width: 12),
-                Text('Delete User'),
-              ],
-            ),
-          ),
-        if (!canEditLocal && !canDeleteLocal)
-          const PopupMenuItem<String>(
-            enabled: false,
-            value: 'view_only',
-            child: Row(
-              children: [
-                Icon(Icons.lock_outline, size: 20),
-                SizedBox(width: 12),
-                Text('View Only'),
-              ],
-            ),
-          ),
-      ],
-    ).then((value) {
-      // Execute immediately when menu closes, don't delay
-      if (value == null) return;
-      
-      // Use WidgetsBinding to ensure we're in a safe frame
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        
-        if (value == 'change_role' && canEditLocal && !isCurrentUserLocal) {
-          _showRoleSelectionDialog();
-        } else if (value == 'delete' && canDeleteLocal && !isCurrentUserLocal) {
-          _deleteUser();
-        }
-      });
-    });
   }
 
   @override
@@ -727,121 +529,151 @@ class _UserCardState extends State<_UserCard> {
     final theme = Theme.of(context);
     final isCurrentUser = user.uid == currentUserId;
     final roleColor = _getRoleColor(user.role);
-    final isMobile = Responsive.isMobile(context);
 
-    return Card(
-      margin: EdgeInsets.only(
-        bottom: Responsive.responsiveSpacing(context, mobile: 12, tablet: 16),
-      ),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: roleColor.withValues(alpha: 0.3),
-          width: 1.5,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: theme.colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: theme.colorScheme.outline.withOpacity(0.1),
+          width: 1,
         ),
       ),
       child: Padding(
         padding: EdgeInsets.all(
-          Responsive.responsiveSpacing(context, mobile: 16, tablet: 20),
-        ),
+            Responsive.responsiveSpacing(context, mobile: 20, tablet: 24)),
         child: Row(
           children: [
-            // Avatar
-            Container(
-              width: Responsive.responsiveIconSize(context,
-                  mobile: 56, tablet: 64),
-              height: Responsive.responsiveIconSize(context,
-                  mobile: 56, tablet: 64),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    roleColor.withValues(alpha: 0.8),
-                    roleColor,
-                  ],
+            // Avatar with Role Badge
+            Stack(
+              children: [
+                Container(
+                  width: Responsive.responsiveIconSize(context,
+                      mobile: 64, tablet: 72),
+                  height: Responsive.responsiveIconSize(context,
+                      mobile: 64, tablet: 72),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        roleColor.withOpacity(0.8),
+                        roleColor,
+                      ],
+                    ),
+                  ),
+                  child: Icon(
+                    _getRoleIcon(user.role),
+                    color: Colors.white,
+                    size: Responsive.responsiveIconSize(context,
+                        mobile: 28, tablet: 32),
+                  ),
                 ),
-              ),
-              child: Icon(
-                _getRoleIcon(user.role),
-                color: Colors.white,
-                size: Responsive.responsiveIconSize(context,
-                    mobile: 28, tablet: 32),
-              ),
+                if (isCurrentUser)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: theme.colorScheme.surface,
+                          width: 2,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.star,
+                        color: theme.colorScheme.onPrimary,
+                        size: 12,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             SizedBox(
-              width:
-                  Responsive.responsiveSpacing(context, mobile: 16, tablet: 20),
-            ),
+                width: Responsive.responsiveSpacing(context,
+                    mobile: 20, tablet: 24)),
+
             // User Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: Text(
-                          user.displayName ?? user.email,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user.displayName ?? 'No Name',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(
+                                height: Responsive.responsiveSpacing(context,
+                                    mobile: 4)),
+                            Text(
+                              user.email,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurface
+                                    .withOpacity(0.7),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ),
                       if (isCurrentUser)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary
-                                .withValues(alpha: 0.1),
+                            color: theme.colorScheme.primary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: theme.colorScheme.primary.withOpacity(0.3),
+                            ),
                           ),
                           child: Text(
-                            'YOU',
+                            'You',
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.colorScheme.primary,
                               fontWeight: FontWeight.bold,
-                              fontSize: 10,
                             ),
                           ),
                         ),
                     ],
                   ),
                   SizedBox(
-                    height: Responsive.responsiveSpacing(context,
-                        mobile: 4, tablet: 6),
-                  ),
-                  Text(
-                    user.email,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(
-                    height: Responsive.responsiveSpacing(context,
-                        mobile: 8, tablet: 12),
-                  ),
+                      height:
+                          Responsive.responsiveSpacing(context, mobile: 12)),
+
+                  // Role Badge
                   Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: Responsive.responsiveSpacing(context,
-                          mobile: 12, tablet: 16),
-                      vertical: Responsive.responsiveSpacing(context,
-                          mobile: 6, tablet: 8),
-                    ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: roleColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
+                      color: roleColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: roleColor,
+                        color: roleColor.withOpacity(0.3),
                         width: 1.5,
                       ),
                     ),
@@ -850,14 +682,12 @@ class _UserCardState extends State<_UserCard> {
                       children: [
                         Icon(
                           _getRoleIcon(user.role),
-                          size: Responsive.responsiveIconSize(context,
-                              mobile: 16, tablet: 18),
+                          size: 16,
                           color: roleColor,
                         ),
                         SizedBox(
-                          width: Responsive.responsiveSpacing(context,
-                              mobile: 6, tablet: 8),
-                        ),
+                            width: Responsive.responsiveSpacing(context,
+                                mobile: 8)),
                         Text(
                           _getRoleLabel(user.role),
                           style: theme.textTheme.labelLarge?.copyWith(
@@ -871,36 +701,6 @@ class _UserCardState extends State<_UserCard> {
                 ],
               ),
             ),
-            // Actions
-            if (!isMobile) ...[
-              SizedBox(
-                width: Responsive.responsiveSpacing(context,
-                    mobile: 8, tablet: 16),
-              ),
-              if (canEdit && !isCurrentUser)
-                IconButton(
-                  icon: Icon(Icons.swap_horiz, color: roleColor),
-                  tooltip: 'Change role',
-                  onPressed: () => _showRoleSelectionDialog(),
-                ),
-              if (canDelete && !isCurrentUser)
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  tooltip: 'Delete user',
-                  onPressed: () => _deleteUser(),
-                ),
-            ] else ...[
-              SizedBox(
-                width: Responsive.responsiveSpacing(context, mobile: 8),
-              ),
-              IconButton(
-                icon: Icon(
-                  Icons.more_vert,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-                onPressed: () => _showCustomMenu(context, theme),
-              ),
-            ],
           ],
         ),
       ),
@@ -914,12 +714,14 @@ class _FilterChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onSelected;
   final Color? color;
+  final IconData icon;
 
   const _FilterChip({
     required this.label,
     required this.value,
     required this.selected,
     required this.onSelected,
+    required this.icon,
     this.color,
   });
 
@@ -929,15 +731,34 @@ class _FilterChip extends StatelessWidget {
     final chipColor = color ?? theme.colorScheme.primary;
 
     return FilterChip(
-      label: Text(label),
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon,
+              size: 16,
+              color: selected
+                  ? chipColor
+                  : theme.colorScheme.onSurface.withOpacity(0.6)),
+          SizedBox(width: 6),
+          Text(label),
+        ],
+      ),
       selected: selected,
       onSelected: (_) => onSelected(),
-      selectedColor: chipColor.withValues(alpha: 0.15),
+      backgroundColor: theme.colorScheme.surface,
+      selectedColor: chipColor.withOpacity(0.15),
       checkmarkColor: chipColor,
       side: BorderSide(
-        color: selected
-            ? chipColor
-            : theme.colorScheme.outline.withValues(alpha: 0.3),
+        color:
+            selected ? chipColor : theme.colorScheme.outline.withOpacity(0.3),
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      labelStyle: theme.textTheme.bodyMedium?.copyWith(
+        color:
+            selected ? chipColor : theme.colorScheme.onSurface.withOpacity(0.8),
+        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
       ),
     );
   }
@@ -962,13 +783,12 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(
-        Responsive.responsiveSpacing(context, mobile: 16, tablet: 20),
-      ),
+          Responsive.responsiveSpacing(context, mobile: 20, tablet: 24)),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: color.withValues(alpha: 0.2),
+          color: color.withOpacity(0.2),
           width: 1,
         ),
       ),
@@ -976,11 +796,10 @@ class _StatCard extends StatelessWidget {
         children: [
           Container(
             padding: EdgeInsets.all(
-              Responsive.responsiveSpacing(context, mobile: 10, tablet: 12),
-            ),
+                Responsive.responsiveSpacing(context, mobile: 12, tablet: 14)),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
               icon,
@@ -990,9 +809,8 @@ class _StatCard extends StatelessWidget {
             ),
           ),
           SizedBox(
-            width:
-                Responsive.responsiveSpacing(context, mobile: 12, tablet: 16),
-          ),
+              width: Responsive.responsiveSpacing(context,
+                  mobile: 16, tablet: 20)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1002,356 +820,23 @@ class _StatCard extends StatelessWidget {
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: color,
+                    fontSize: Responsive.responsiveFontSize(context,
+                        mobile: 24, tablet: 28),
                   ),
                 ),
                 SizedBox(
-                  height: Responsive.responsiveSpacing(context, mobile: 4),
-                ),
+                    height: Responsive.responsiveSpacing(context, mobile: 4)),
                 Text(
                   label,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Beautiful Material 3 role selection dialog
-class _RoleSelectionDialog extends StatefulWidget {
-  final UserModel user;
-  final String currentRole;
-
-  const _RoleSelectionDialog({
-    required this.user,
-    required this.currentRole,
-  });
-
-  @override
-  State<_RoleSelectionDialog> createState() => _RoleSelectionDialogState();
-}
-
-class _RoleSelectionDialogState extends State<_RoleSelectionDialog> {
-  late String _selectedRole;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedRole = widget.currentRole.toLowerCase();
-  }
-
-  Color _getRoleColor(String role) {
-    switch (role) {
-      case 'admin':
-        return Colors.orange;
-      case 'employee':
-        return Colors.green;
-      case 'customer':
-      default:
-        return Colors.blue;
-    }
-  }
-
-  IconData _getRoleIcon(String role) {
-    switch (role) {
-      case 'admin':
-        return Icons.admin_panel_settings;
-      case 'employee':
-        return Icons.coffee;
-      case 'customer':
-      default:
-        return Icons.person;
-    }
-  }
-
-  String _getRoleLabel(String role) {
-    switch (role) {
-      case 'admin':
-        return 'Administrator';
-      case 'employee':
-        return 'Employee';
-      case 'customer':
-      default:
-        return 'Customer';
-    }
-  }
-
-  String _getRoleDescription(String role) {
-    switch (role) {
-      case 'admin':
-        return 'Full access to all features and user management';
-      case 'employee':
-        return 'Can process orders and view inventory';
-      case 'customer':
-      default:
-        return 'Can browse menu and place orders';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final roles = ['admin', 'employee', 'customer'];
-
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 500),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.swap_horiz,
-                    color: theme.colorScheme.primary,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Change User Role',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Select a new role for this user',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // User Info Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              theme.colorScheme.primary.withValues(alpha: 0.8),
-                              theme.colorScheme.primary,
-                            ],
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.person,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.user.displayName ?? widget.user.email,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              widget.user.email,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _getRoleColor(widget.currentRole).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _getRoleColor(widget.currentRole),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _getRoleIcon(widget.currentRole),
-                          size: 16,
-                          color: _getRoleColor(widget.currentRole),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Current: ${_getRoleLabel(widget.currentRole)}',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: _getRoleColor(widget.currentRole),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Role Selection
-            Text(
-              'Select New Role',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Role Options
-            ...roles.map((role) {
-              final isSelected = _selectedRole == role;
-              final roleColor = _getRoleColor(role);
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: InkWell(
-                  onTap: () => setState(() => _selectedRole = role),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? roleColor.withValues(alpha: 0.1)
-                          : theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isSelected
-                            ? roleColor
-                            : theme.colorScheme.outline.withValues(alpha: 0.2),
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? roleColor.withValues(alpha: 0.2)
-                                : theme.colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            _getRoleIcon(role),
-                            color: isSelected ? roleColor : theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _getRoleLabel(role),
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelected ? roleColor : null,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _getRoleDescription(role),
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (isSelected)
-                          Icon(
-                            Icons.check_circle,
-                            color: roleColor,
-                            size: 24,
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }),
-
-            const SizedBox(height: 24),
-
-            // Action Buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                const SizedBox(width: 12),
-                FilledButton.icon(
-                  onPressed: _selectedRole == widget.currentRole.toLowerCase()
-                      ? null
-                      : () => Navigator.pop(context, _selectedRole),
-                  icon: const Icon(Icons.check),
-                  label: const Text('Confirm'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

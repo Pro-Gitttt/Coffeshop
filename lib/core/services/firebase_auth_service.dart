@@ -24,9 +24,10 @@ class FirebaseAuthService {
     debugPrint('[FirebaseAuthService] signInWithEmailAndPassword() called');
     debugPrint('  Email: $email');
     debugPrint('═══════════════════════════════════════════════════════');
-    
+
     try {
-      debugPrint('[FirebaseAuthService] Step 1: Calling Firebase Auth signInWithEmailAndPassword...');
+      debugPrint(
+          '[FirebaseAuthService] Step 1: Calling Firebase Auth signInWithEmailAndPassword...');
       UserCredential? credential;
       try {
         credential = await _auth.signInWithEmailAndPassword(
@@ -37,15 +38,17 @@ class FirebaseAuthService {
       } catch (e) {
         // Handle Pigeon decode error specifically - this is a known issue on Android emulators
         // where Firebase Auth succeeds but the response decode fails
-        if (e.toString().contains('PigeonUserDetails') || 
+        if (e.toString().contains('PigeonUserDetails') ||
             e.toString().contains('type cast') ||
             e.toString().contains('is not a subtype')) {
-          debugPrint('[FirebaseAuthService] ⚠️ Pigeon decode error detected, checking session...');
+          debugPrint(
+              '[FirebaseAuthService] ⚠️ Pigeon decode error detected, checking session...');
           // Check if auth actually succeeded despite the decode error
           await Future.delayed(const Duration(milliseconds: 100));
           final sessionUser = _auth.currentUser;
           if (sessionUser != null) {
-            debugPrint('[FirebaseAuthService] ✅ Session exists despite decode error, proceeding...');
+            debugPrint(
+                '[FirebaseAuthService] ✅ Session exists despite decode error, proceeding...');
             // Continue with session user instead of credential
             final user = sessionUser;
             try {
@@ -57,9 +60,10 @@ class FirebaseAuthService {
               );
               return userModel;
             } catch (inner) {
-              debugPrint('[FirebaseAuthService] ⚠️ ensureUserDoc failed: $inner');
+              debugPrint(
+                  '[FirebaseAuthService] ⚠️ ensureUserDoc failed: $inner');
               final email = user.email ?? '';
-              final role = isAdminEmail(email) ? 'admin' : 'customer';
+              final role = isAdminEmail(email) ? 'admin' : 'client';
               return UserModel(
                 uid: user.uid,
                 email: email,
@@ -78,14 +82,16 @@ class FirebaseAuthService {
 
       final user = credential.user ?? _auth.currentUser;
       if (user != null) {
-        debugPrint('[FirebaseAuthService] Step 2: User obtained from Firebase Auth');
+        debugPrint(
+            '[FirebaseAuthService] Step 2: User obtained from Firebase Auth');
         debugPrint('  - UID: ${user.uid}');
         debugPrint('  - Email: ${user.email}');
         debugPrint('  - Email verified: ${user.emailVerified}');
-        
+
         // Ensure user document exists and is up to date with role overrides
         try {
-          debugPrint('[FirebaseAuthService] Step 3: Ensuring user document exists in Firestore...');
+          debugPrint(
+              '[FirebaseAuthService] Step 3: Ensuring user document exists in Firestore...');
           final userModel = await _ensureUserDoc(
             user,
             displayName: user.displayName,
@@ -104,7 +110,7 @@ class FirebaseAuthService {
           debugPrint('[FirebaseAuthService] Creating fallback UserModel...');
           // Fallback: if Firestore/AppCheck is temporarily unavailable, still allow login
           final email = user.email ?? '';
-          final role = isAdminEmail(email) ? 'admin' : 'customer';
+          final role = isAdminEmail(email) ? 'admin' : 'client';
           final fallbackModel = UserModel(
             uid: user.uid,
             email: email,
@@ -119,12 +125,13 @@ class FirebaseAuthService {
           debugPrint('═══════════════════════════════════════════════════════');
           return fallbackModel;
         } catch (e, stackTrace) {
-          debugPrint('[FirebaseAuthService] ❌ Unexpected error in _ensureUserDoc');
+          debugPrint(
+              '[FirebaseAuthService] ❌ Unexpected error in _ensureUserDoc');
           debugPrint('  - Error: $e');
           debugPrint('  - Stack trace: $stackTrace');
           debugPrint('[FirebaseAuthService] Creating fallback UserModel...');
           final email = user.email ?? '';
-          final role = isAdminEmail(email) ? 'admin' : 'customer';
+          final role = isAdminEmail(email) ? 'admin' : 'client';
           final fallbackModel = UserModel(
             uid: user.uid,
             email: email,
@@ -139,7 +146,7 @@ class FirebaseAuthService {
           return fallbackModel;
         }
       }
-      
+
       debugPrint('[FirebaseAuthService] ❌ No user returned from Firebase Auth');
       debugPrint('═══════════════════════════════════════════════════════');
       return null;
@@ -153,14 +160,15 @@ class FirebaseAuthService {
       debugPrint('[FirebaseAuthService] ❌ Unexpected exception');
       debugPrint('  - Error: $e');
       debugPrint('  - Stack trace: $stackTrace');
-      
+
       // Workaround: Some environments hit a Pigeon decode mismatch during signIn,
       // but Firebase Auth actually completes and establishes a session.
       // If a currentUser exists, treat this as success and continue.
       try {
         final sessionUser = _auth.currentUser;
         if (sessionUser != null) {
-          debugPrint('[FirebaseAuthService] ⚠️ Decode error suspected but session exists. Proceeding with ensure user doc.');
+          debugPrint(
+              '[FirebaseAuthService] ⚠️ Decode error suspected but session exists. Proceeding with ensure user doc.');
           try {
             final ensured = await _ensureUserDoc(
               sessionUser,
@@ -168,14 +176,17 @@ class FirebaseAuthService {
               phoneNumber: sessionUser.phoneNumber,
               photoUrl: sessionUser.photoURL,
             );
-            debugPrint('[FirebaseAuthService] ✅ Session-based recovery succeeded');
-            debugPrint('═══════════════════════════════════════════════════════');
+            debugPrint(
+                '[FirebaseAuthService] ✅ Session-based recovery succeeded');
+            debugPrint(
+                '═══════════════════════════════════════════════════════');
             return ensured;
           } catch (inner) {
-            debugPrint('[FirebaseAuthService] ⚠️ ensureUserDoc failed during recovery: $inner');
+            debugPrint(
+                '[FirebaseAuthService] ⚠️ ensureUserDoc failed during recovery: $inner');
             // Fallback to lightweight model from session
             final email = sessionUser.email ?? '';
-            final role = isAdminEmail(email) ? 'admin' : 'customer';
+            final role = isAdminEmail(email) ? 'admin' : 'client';
             final fallbackModel = UserModel(
               uid: sessionUser.uid,
               email: email,
@@ -185,8 +196,10 @@ class FirebaseAuthService {
               role: role,
               createdAt: DateTime.now(),
             );
-            debugPrint('[FirebaseAuthService] ✅ Returning session fallback UserModel');
-            debugPrint('═══════════════════════════════════════════════════════');
+            debugPrint(
+                '[FirebaseAuthService] ✅ Returning session fallback UserModel');
+            debugPrint(
+                '═══════════════════════════════════════════════════════');
             return fallbackModel;
           }
         }
@@ -224,8 +237,9 @@ class FirebaseAuthService {
         } catch (e) {
           // If Firestore fails but user was created, still return success
           // The user can update their profile later
-          debugPrint('Warning: Firestore document creation failed but user created: $e');
-          final role = isAdminEmail(email) ? 'admin' : 'customer';
+          debugPrint(
+              'Warning: Firestore document creation failed but user created: $e');
+          final role = isAdminEmail(email) ? 'admin' : 'client';
           // Return successful UserModel even if Firestore write failed
           final fallbackModel = UserModel(
             uid: user.uid,
@@ -236,7 +250,8 @@ class FirebaseAuthService {
             role: role,
             createdAt: DateTime.now(),
           );
-          debugPrint('Returning fallback UserModel: ${fallbackModel.uid}, displayName: ${fallbackModel.displayName}');
+          debugPrint(
+              'Returning fallback UserModel: ${fallbackModel.uid}, displayName: ${fallbackModel.displayName}');
           return fallbackModel;
         }
       }
@@ -258,8 +273,8 @@ class FirebaseAuthService {
       if (currentUser != null) {
         // User was created, return success even if something else failed
         debugPrint('User exists in Firebase Auth despite error: $e');
-          final role = isAdminEmail(email) ? 'admin' : 'customer';
-          return UserModel(
+        final role = isAdminEmail(email) ? 'admin' : 'client';
+        return UserModel(
           uid: currentUser.uid,
           email: currentUser.email ?? email,
           displayName: currentUser.displayName,
@@ -282,19 +297,23 @@ class FirebaseAuthService {
   }) async {
     int attempt = 0;
     Duration delay = initialDelay;
-    
+
     while (attempt < maxRetries) {
       try {
         return await operation();
       } on FirebaseException catch (e) {
         attempt++;
         // Retry on transient errors
-        if ((e.code == 'unavailable' || e.code == 'deadline-exceeded' || 
-             e.code == 'internal' || e.code == 'resource-exhausted') && 
+        if ((e.code == 'unavailable' ||
+                e.code == 'deadline-exceeded' ||
+                e.code == 'internal' ||
+                e.code == 'resource-exhausted') &&
             attempt < maxRetries) {
-          debugPrint('[FirebaseAuthService] Firestore error (attempt $attempt/$maxRetries): ${e.code}, retrying in ${delay.inMilliseconds}ms...');
+          debugPrint(
+              '[FirebaseAuthService] Firestore error (attempt $attempt/$maxRetries): ${e.code}, retrying in ${delay.inMilliseconds}ms...');
           await Future.delayed(delay);
-          delay = Duration(milliseconds: delay.inMilliseconds * 2); // Exponential backoff
+          delay = Duration(
+              milliseconds: delay.inMilliseconds * 2); // Exponential backoff
           continue;
         }
         // Non-retryable error or max retries reached
@@ -304,7 +323,7 @@ class FirebaseAuthService {
         rethrow;
       }
     }
-    
+
     throw const AppException('firestore', 'Operation failed after retries');
   }
 
@@ -323,7 +342,8 @@ class FirebaseAuthService {
       return null;
     } on FirebaseException catch (e) {
       debugPrint('Firestore error getting user data: ${e.code} - ${e.message}');
-      throw AppException('firestore', 'Error retrieving data: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error retrieving data: ${e.message ?? e.code}');
     } catch (e) {
       debugPrint('Unexpected error getting user data: $e');
       throw const AppException('firestore', 'Error retrieving data');
@@ -353,12 +373,14 @@ class FirebaseAuthService {
     } on FirebaseAuthException catch (e) {
       throw AppException.fromFirebaseAuth(e.code);
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error updating email: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error updating email: ${e.message ?? e.code}');
     }
   }
 
   // Update password
-  Future<void> updatePassword(String currentPassword, String newPassword) async {
+  Future<void> updatePassword(
+      String currentPassword, String newPassword) async {
     final user = _auth.currentUser;
     if (user == null) {
       throw const AppException('auth-required', 'You must be logged in.');
@@ -390,7 +412,8 @@ class FirebaseAuthService {
         SetOptions(merge: true),
       );
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error updating display name: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error updating display name: ${e.message ?? e.code}');
     }
   }
 
@@ -406,7 +429,8 @@ class FirebaseAuthService {
         SetOptions(merge: true),
       );
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error updating phone number: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error updating phone number: ${e.message ?? e.code}');
     }
   }
 
@@ -425,7 +449,7 @@ class FirebaseAuthService {
     debugPrint('  - Preferred email: $preferredEmail');
     debugPrint('  - DisplayName: $displayName');
     debugPrint('═══════════════════════════════════════════════════════');
-    
+
     final uid = user.uid;
     final email = preferredEmail ?? user.email ?? '';
     final resolvedDisplayName = (displayName?.trim().isNotEmpty == true)
@@ -439,7 +463,8 @@ class FirebaseAuthService {
         : (user.photoURL ?? '').trim();
 
     final ref = _firestore.collection('users').doc(uid);
-    debugPrint('[FirebaseAuthService] Step 1: Checking if user document exists...');
+    debugPrint(
+        '[FirebaseAuthService] Step 1: Checking if user document exists...');
     final snapshot = await _retryFirestoreOperation(
       () => ref.get(),
       maxRetries: 3,
@@ -447,30 +472,40 @@ class FirebaseAuthService {
     debugPrint('[FirebaseAuthService] Document exists: ${snapshot.exists}');
 
     if (snapshot.exists) {
-      debugPrint('[FirebaseAuthService] Step 2: User document exists, parsing...');
+      debugPrint(
+          '[FirebaseAuthService] Step 2: User document exists, parsing...');
       final existing = UserModel.fromFirestore(snapshot.data()!, uid);
       debugPrint('[FirebaseAuthService] Existing user data:');
       debugPrint('  - Email: ${existing.email}');
       debugPrint('  - DisplayName: ${existing.displayName}');
       debugPrint('  - Role: ${existing.role}');
-      
+
       // Preserve existing role - don't change it on login
       final desiredRole = existing.role;
-      final desiredDisplayName =
-          resolvedDisplayName.isNotEmpty ? resolvedDisplayName : existing.displayName;
-      final desiredPhoneNumber =
-          resolvedPhoneNumber.isNotEmpty ? resolvedPhoneNumber : existing.phoneNumber;
+      final desiredDisplayName = resolvedDisplayName.isNotEmpty
+          ? resolvedDisplayName
+          : existing.displayName;
+      final desiredPhoneNumber = resolvedPhoneNumber.isNotEmpty
+          ? resolvedPhoneNumber
+          : existing.phoneNumber;
       final desiredPhotoUrl =
           resolvedPhotoUrl.isNotEmpty ? resolvedPhotoUrl : existing.photoUrl;
-      debugPrint('[FirebaseAuthService] Preserving existing role: $desiredRole');
-      
+      debugPrint(
+          '[FirebaseAuthService] Preserving existing role: $desiredRole');
+
       final needsUpdate = (existing.email != email && email.isNotEmpty) ||
-          (desiredDisplayName != null && desiredDisplayName.isNotEmpty && existing.displayName != desiredDisplayName) ||
-          (desiredPhoneNumber != null && desiredPhoneNumber.isNotEmpty && existing.phoneNumber != desiredPhoneNumber) ||
-          (desiredPhotoUrl != null && desiredPhotoUrl.isNotEmpty && existing.photoUrl != desiredPhotoUrl);
-      
+          (desiredDisplayName != null &&
+              desiredDisplayName.isNotEmpty &&
+              existing.displayName != desiredDisplayName) ||
+          (desiredPhoneNumber != null &&
+              desiredPhoneNumber.isNotEmpty &&
+              existing.phoneNumber != desiredPhoneNumber) ||
+          (desiredPhotoUrl != null &&
+              desiredPhotoUrl.isNotEmpty &&
+              existing.photoUrl != desiredPhotoUrl);
+
       debugPrint('[FirebaseAuthService] Needs update: $needsUpdate');
-      
+
       if (needsUpdate) {
         debugPrint('[FirebaseAuthService] Step 3: Updating user document...');
         final updated = UserModel(
@@ -487,17 +522,25 @@ class FirebaseAuthService {
           // Don't update role - preserve existing role
           if (email.isNotEmpty && existing.email != email) {
             updateData['email'] = email;
-            debugPrint('[FirebaseAuthService] Updating email: ${existing.email} -> $email');
+            debugPrint(
+                '[FirebaseAuthService] Updating email: ${existing.email} -> $email');
           }
-          if (desiredDisplayName != null && desiredDisplayName.isNotEmpty && existing.displayName != desiredDisplayName) {
+          if (desiredDisplayName != null &&
+              desiredDisplayName.isNotEmpty &&
+              existing.displayName != desiredDisplayName) {
             updateData['displayName'] = desiredDisplayName;
-            debugPrint('[FirebaseAuthService] Updating displayName: ${existing.displayName} -> $desiredDisplayName');
+            debugPrint(
+                '[FirebaseAuthService] Updating displayName: ${existing.displayName} -> $desiredDisplayName');
           }
-          if (desiredPhoneNumber != null && desiredPhoneNumber.isNotEmpty && existing.phoneNumber != desiredPhoneNumber) {
+          if (desiredPhoneNumber != null &&
+              desiredPhoneNumber.isNotEmpty &&
+              existing.phoneNumber != desiredPhoneNumber) {
             updateData['phoneNumber'] = desiredPhoneNumber;
             debugPrint('[FirebaseAuthService] Updating phoneNumber');
           }
-          if (desiredPhotoUrl != null && desiredPhotoUrl.isNotEmpty && existing.photoUrl != desiredPhotoUrl) {
+          if (desiredPhotoUrl != null &&
+              desiredPhotoUrl.isNotEmpty &&
+              existing.photoUrl != desiredPhotoUrl) {
             updateData['photoUrl'] = desiredPhotoUrl;
             debugPrint('[FirebaseAuthService] Updating photoUrl');
           }
@@ -511,26 +554,29 @@ class FirebaseAuthService {
           debugPrint('[FirebaseAuthService] ❌ FirebaseException during update');
           debugPrint('  - Code: ${e.code}');
           debugPrint('  - Message: ${e.message}');
-          throw AppException('firestore',
-              'Update failed: ${e.message ?? e.code}');
+          throw AppException(
+              'firestore', 'Update failed: ${e.message ?? e.code}');
         }
         debugPrint('═══════════════════════════════════════════════════════');
         return updated;
       }
-      debugPrint('[FirebaseAuthService] ✅ No update needed, returning existing user');
+      debugPrint(
+          '[FirebaseAuthService] ✅ No update needed, returning existing user');
       debugPrint('═══════════════════════════════════════════════════════');
       return existing;
     }
 
-    debugPrint('[FirebaseAuthService] Step 2: User document does not exist, creating new one...');
+    debugPrint(
+        '[FirebaseAuthService] Step 2: User document does not exist, creating new one...');
     // For new users, assign role based on admin email list
     // For existing users logging in, this should not happen as document should exist
-    final role = isAdminEmail(email) ? 'admin' : 'customer';
+    final role = isAdminEmail(email) ? 'admin' : 'client';
     debugPrint('[FirebaseAuthService] New user role: $role');
-    
+
     try {
-      debugPrint('[FirebaseAuthService] Creating user document for uid: $uid, email: $email, displayName: $displayName');
-      
+      debugPrint(
+          '[FirebaseAuthService] Creating user document for uid: $uid, email: $email, displayName: $displayName');
+
       // Double-check document doesn't exist (race condition protection)
       final doubleCheck = await _retryFirestoreOperation(
         () => ref.get(),
@@ -538,12 +584,13 @@ class FirebaseAuthService {
       );
       if (doubleCheck.exists) {
         // Document exists! This shouldn't happen, but if it does, use existing data
-        debugPrint('[FirebaseAuthService] ⚠️ WARNING: Document exists after initial check, using existing data');
+        debugPrint(
+            '[FirebaseAuthService] ⚠️ WARNING: Document exists after initial check, using existing data');
         final existing = UserModel.fromFirestore(doubleCheck.data()!, uid);
         debugPrint('[FirebaseAuthService] Existing role: ${existing.role}');
         return existing;
       }
-      
+
       // Create with server timestamp to ensure canonical creation time
       final Map<String, dynamic> data = {
         'uid': uid,
@@ -555,35 +602,40 @@ class FirebaseAuthService {
       }
       if (resolvedDisplayName.isNotEmpty) {
         data['displayName'] = resolvedDisplayName;
-        debugPrint('[FirebaseAuthService] Adding displayName to Firestore data: $resolvedDisplayName');
+        debugPrint(
+            '[FirebaseAuthService] Adding displayName to Firestore data: $resolvedDisplayName');
       }
       if (resolvedPhoneNumber.isNotEmpty) {
         data['phoneNumber'] = resolvedPhoneNumber;
-        debugPrint('[FirebaseAuthService] Adding phoneNumber to Firestore data');
+        debugPrint(
+            '[FirebaseAuthService] Adding phoneNumber to Firestore data');
       }
       if (resolvedPhotoUrl.isNotEmpty) {
         data['photoUrl'] = resolvedPhotoUrl;
         debugPrint('[FirebaseAuthService] Adding photoUrl to Firestore data');
       }
-      
-      debugPrint('[FirebaseAuthService] Writing user document with data: $data');
-      
+
+      debugPrint(
+          '[FirebaseAuthService] Writing user document with data: $data');
+
       // For new documents, use set() without merge to ensure all fields are written
       // This is safe because we've confirmed the document doesn't exist
       await _retryFirestoreOperation(
         () => ref.set(data),
         maxRetries: 3,
       );
-      debugPrint('[FirebaseAuthService] ✅ User document written to Firestore successfully');
-      
+      debugPrint(
+          '[FirebaseAuthService] ✅ User document written to Firestore successfully');
+
       // Wait a bit for eventual consistency, then verify
       await Future.delayed(const Duration(milliseconds: 200));
-      
+
       // Verify write succeeded by reading back (with retry for eventual consistency)
       int retries = 3;
       while (retries > 0) {
         try {
-          debugPrint('[FirebaseAuthService] Step 3: Verifying document write (retry ${4 - retries}/3)...');
+          debugPrint(
+              '[FirebaseAuthService] Step 3: Verifying document write (retry ${4 - retries}/3)...');
           final verify = await _retryFirestoreOperation(
             () => ref.get(),
             maxRetries: 2,
@@ -591,17 +643,22 @@ class FirebaseAuthService {
           if (verify.exists) {
             final verifiedData = verify.data()!;
             debugPrint('[FirebaseAuthService] ✅ Document verified');
-            debugPrint('[FirebaseAuthService] Verified document data: $verifiedData');
-            
+            debugPrint(
+                '[FirebaseAuthService] Verified document data: $verifiedData');
+
             // Verify role wasn't changed (shouldn't happen for new documents, but safety check)
-            if (verifiedData.containsKey('role') && verifiedData['role'] != role) {
-              debugPrint('[FirebaseAuthService] ⚠️ WARNING: Role mismatch! Expected: $role, Found: ${verifiedData['role']}');
+            if (verifiedData.containsKey('role') &&
+                verifiedData['role'] != role) {
+              debugPrint(
+                  '[FirebaseAuthService] ⚠️ WARNING: Role mismatch! Expected: $role, Found: ${verifiedData['role']}');
               // This shouldn't happen for new documents, but if it does, use what's in Firestore
               // Don't update it - just use the existing role
             }
-            
-            if (resolvedDisplayName.isNotEmpty && verifiedData['displayName'] != resolvedDisplayName) {
-              debugPrint('[FirebaseAuthService] ⚠️ displayName mismatch detected, updating...');
+
+            if (resolvedDisplayName.isNotEmpty &&
+                verifiedData['displayName'] != resolvedDisplayName) {
+              debugPrint(
+                  '[FirebaseAuthService] ⚠️ displayName mismatch detected, updating...');
               await _retryFirestoreOperation(
                 () => ref.update({'displayName': resolvedDisplayName}),
                 maxRetries: 2,
@@ -609,8 +666,10 @@ class FirebaseAuthService {
               verifiedData['displayName'] = resolvedDisplayName;
               debugPrint('[FirebaseAuthService] ✅ displayName updated');
             }
-            if (resolvedPhoneNumber.isNotEmpty && verifiedData['phoneNumber'] != resolvedPhoneNumber) {
-              debugPrint('[FirebaseAuthService] ⚠️ phoneNumber mismatch detected, updating...');
+            if (resolvedPhoneNumber.isNotEmpty &&
+                verifiedData['phoneNumber'] != resolvedPhoneNumber) {
+              debugPrint(
+                  '[FirebaseAuthService] ⚠️ phoneNumber mismatch detected, updating...');
               await _retryFirestoreOperation(
                 () => ref.update({'phoneNumber': resolvedPhoneNumber}),
                 maxRetries: 2,
@@ -618,8 +677,10 @@ class FirebaseAuthService {
               verifiedData['phoneNumber'] = resolvedPhoneNumber;
               debugPrint('[FirebaseAuthService] ✅ phoneNumber updated');
             }
-            if (resolvedPhotoUrl.isNotEmpty && verifiedData['photoUrl'] != resolvedPhotoUrl) {
-              debugPrint('[FirebaseAuthService] ⚠️ photoUrl mismatch detected, updating...');
+            if (resolvedPhotoUrl.isNotEmpty &&
+                verifiedData['photoUrl'] != resolvedPhotoUrl) {
+              debugPrint(
+                  '[FirebaseAuthService] ⚠️ photoUrl mismatch detected, updating...');
               await _retryFirestoreOperation(
                 () => ref.update({'photoUrl': resolvedPhotoUrl}),
                 maxRetries: 2,
@@ -627,58 +688,70 @@ class FirebaseAuthService {
               verifiedData['photoUrl'] = resolvedPhotoUrl;
               debugPrint('[FirebaseAuthService] ✅ photoUrl updated');
             }
-            
+
             final userModel = UserModel.fromFirestore(verifiedData, uid);
             debugPrint('[FirebaseAuthService] Created UserModel:');
             debugPrint('  - UID: ${userModel.uid}');
             debugPrint('  - Email: ${userModel.email}');
             debugPrint('  - DisplayName: ${userModel.displayName}');
             debugPrint('  - Role: ${userModel.role}');
-            debugPrint('═══════════════════════════════════════════════════════');
+            debugPrint(
+                '═══════════════════════════════════════════════════════');
             return userModel;
           }
-          debugPrint('[FirebaseAuthService] ⚠️ Document not found on retry ${4 - retries}');
+          debugPrint(
+              '[FirebaseAuthService] ⚠️ Document not found on retry ${4 - retries}');
           retries--;
           if (retries > 0) {
             await Future.delayed(Duration(milliseconds: 200 * (4 - retries)));
           }
         } on FirebaseException catch (e) {
-          debugPrint('[FirebaseAuthService] ❌ Firestore read error on retry ${4 - retries}');
+          debugPrint(
+              '[FirebaseAuthService] ❌ Firestore read error on retry ${4 - retries}');
           debugPrint('  - Code: ${e.code}');
           debugPrint('  - Message: ${e.message}');
           if (retries == 1) {
             // If read fails but write succeeded, return model anyway
-            debugPrint('[FirebaseAuthService] ⚠️ Warning: Firestore read-back failed but write succeeded');
+            debugPrint(
+                '[FirebaseAuthService] ⚠️ Warning: Firestore read-back failed but write succeeded');
             final fallbackModel = UserModel(
               uid: uid,
               email: email,
-              displayName: resolvedDisplayName.isNotEmpty ? resolvedDisplayName : null,
-              phoneNumber: resolvedPhoneNumber.isNotEmpty ? resolvedPhoneNumber : null,
+              displayName:
+                  resolvedDisplayName.isNotEmpty ? resolvedDisplayName : null,
+              phoneNumber:
+                  resolvedPhoneNumber.isNotEmpty ? resolvedPhoneNumber : null,
               photoUrl: resolvedPhotoUrl.isNotEmpty ? resolvedPhotoUrl : null,
               role: role,
               createdAt: DateTime.now(),
             );
-            debugPrint('[FirebaseAuthService] Returning fallback UserModel with displayName: ${fallbackModel.displayName}');
-            debugPrint('═══════════════════════════════════════════════════════');
+            debugPrint(
+                '[FirebaseAuthService] Returning fallback UserModel with displayName: ${fallbackModel.displayName}');
+            debugPrint(
+                '═══════════════════════════════════════════════════════');
             return fallbackModel;
           }
           retries--;
           await Future.delayed(Duration(milliseconds: 200 * (4 - retries)));
         }
       }
-      
+
       // If all retries failed but write succeeded, return model anyway
-      debugPrint('[FirebaseAuthService] ⚠️ All retries failed, returning fallback model');
+      debugPrint(
+          '[FirebaseAuthService] ⚠️ All retries failed, returning fallback model');
       final fallbackModel = UserModel(
         uid: uid,
         email: email,
-        displayName: resolvedDisplayName.isNotEmpty ? resolvedDisplayName : null,
-        phoneNumber: resolvedPhoneNumber.isNotEmpty ? resolvedPhoneNumber : null,
+        displayName:
+            resolvedDisplayName.isNotEmpty ? resolvedDisplayName : null,
+        phoneNumber:
+            resolvedPhoneNumber.isNotEmpty ? resolvedPhoneNumber : null,
         photoUrl: resolvedPhotoUrl.isNotEmpty ? resolvedPhotoUrl : null,
         role: role,
         createdAt: DateTime.now(),
       );
-      debugPrint('[FirebaseAuthService] Returning fallback UserModel with displayName: ${fallbackModel.displayName}');
+      debugPrint(
+          '[FirebaseAuthService] Returning fallback UserModel with displayName: ${fallbackModel.displayName}');
       debugPrint('═══════════════════════════════════════════════════════');
       return fallbackModel;
     } on FirebaseException catch (e) {
@@ -726,7 +799,7 @@ class FirebaseAuthService {
     try {
       final ref = _firestore.collection('users').doc(uid);
       final snapshot = await ref.get();
-      
+
       if (snapshot.exists) {
         final data = snapshot.data()!;
         // If username field exists but displayName doesn't, migrate it

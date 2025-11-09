@@ -23,7 +23,9 @@ class OrderItem {
       name: map['name'] ?? '',
       price: (map['price'] ?? 0).toDouble(),
       quantity: (map['quantity'] ?? 0) as int,
-      options: map['options'] == null ? null : Map<String, dynamic>.from(map['options'] as Map),
+      options: map['options'] == null
+          ? null
+          : Map<String, dynamic>.from(map['options'] as Map),
     );
   }
 
@@ -40,7 +42,7 @@ class OrderItem {
 
 class OrderModel {
   final String id;
-  final String customerId;
+  final String clientId;
   final List<OrderItem> items;
   final double totalPrice;
   final OrderStatus status;
@@ -50,7 +52,7 @@ class OrderModel {
 
   OrderModel({
     required this.id,
-    required this.customerId,
+    required this.clientId,
     required this.items,
     required this.totalPrice,
     required this.status,
@@ -61,7 +63,7 @@ class OrderModel {
 
   OrderModel copyWith({
     String? id,
-    String? customerId,
+    String? clientId,
     List<OrderItem>? items,
     double? totalPrice,
     OrderStatus? status,
@@ -71,7 +73,7 @@ class OrderModel {
   }) {
     return OrderModel(
       id: id ?? this.id,
-      customerId: customerId ?? this.customerId,
+      clientId: clientId ?? this.clientId,
       items: items ?? this.items,
       totalPrice: totalPrice ?? this.totalPrice,
       status: status ?? this.status,
@@ -85,9 +87,10 @@ class OrderModel {
     final data = doc.data() as Map<String, dynamic>;
     return OrderModel(
       id: doc.id,
-      customerId: data['customerId'] ?? '',
+      clientId: data['clientId'] ?? '',
       items: (data['items'] as List?)
-              ?.map((e) => OrderItem.fromMap(Map<String, dynamic>.from(e as Map)))
+              ?.map(
+                  (e) => OrderItem.fromMap(Map<String, dynamic>.from(e as Map)))
               .toList() ??
           const [],
       totalPrice: (data['totalPrice'] ?? 0).toDouble(),
@@ -100,7 +103,7 @@ class OrderModel {
 
   Map<String, dynamic> toFirestore() {
     return {
-      'customerId': customerId,
+      'clientId': clientId,
       'items': items.map((e) => e.toMap()).toList(),
       'totalPrice': totalPrice,
       'status': status.name[0].toUpperCase() + status.name.substring(1),
@@ -127,5 +130,3 @@ OrderStatus _statusFromString(String? status) {
       return OrderStatus.pending;
   }
 }
-
-

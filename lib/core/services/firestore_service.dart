@@ -38,8 +38,7 @@ class FirestoreService {
       final role = (doc.data() ?? const {})['role'] as String?;
       return role == 'admin';
     } catch (e) {
-      throw const AppException(
-          'firestore', "Unable to verify user role.");
+      throw const AppException('firestore', "Unable to verify user role.");
     }
   }
 
@@ -149,8 +148,7 @@ class FirestoreService {
       // Verify by fetching
       final verify = await docRef.get();
       if (!verify.exists) {
-        throw const AppException(
-            'firestore', "Item not found after update.");
+        throw const AppException('firestore', "Item not found after update.");
       }
 
       // Record history
@@ -184,8 +182,7 @@ class FirestoreService {
     } on AppException {
       rethrow;
     } on FirebaseException catch (e) {
-      throw AppException(
-          'firestore', 'Error updating: ${e.message ?? e.code}');
+      throw AppException('firestore', 'Error updating: ${e.message ?? e.code}');
     } catch (e) {
       throw const AppException('unknown', 'Error updating');
     }
@@ -216,8 +213,7 @@ class FirestoreService {
       // Verify by checking existence
       final verify = await docRef.get();
       if (verify.exists) {
-        throw const AppException(
-            'firestore', "Deletion was not confirmed.");
+        throw const AppException('firestore', "Deletion was not confirmed.");
       }
 
       // Record history
@@ -239,8 +235,7 @@ class FirestoreService {
     } on AppException {
       rethrow;
     } on FirebaseException catch (e) {
-      throw AppException(
-          'firestore', 'Error deleting: ${e.message ?? e.code}');
+      throw AppException('firestore', 'Error deleting: ${e.message ?? e.code}');
     } catch (e) {
       throw const AppException('unknown', 'Error deleting');
     }
@@ -266,14 +261,16 @@ class FirestoreService {
       return Stream.error(
           const AppException('auth-required', 'You must be logged in.'));
     }
-    
+
     Query query = _firestore.collection('history');
-    
+
     if (startDate != null) {
-      query = query.where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+      query = query.where('timestamp',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
     }
     if (endDate != null) {
-      query = query.where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+      query = query.where('timestamp',
+          isLessThanOrEqualTo: Timestamp.fromDate(endDate));
     }
     if (productId != null) {
       query = query.where('stockItemId', isEqualTo: productId);
@@ -281,7 +278,7 @@ class FirestoreService {
     if (userId != null) {
       query = query.where('userId', isEqualTo: userId);
     }
-    
+
     return query
         .orderBy('timestamp', descending: true)
         .limit(500)
@@ -353,52 +350,61 @@ class FirestoreService {
         throw const AppException(
             'permission-denied', 'Action reserved for administrators.');
       }
-      
+
       final items = await _firestore.collection('stock').get();
       final history = await _firestore
           .collection('history')
-          .where('timestamp', isGreaterThan: Timestamp.fromDate(
-            DateTime.now().subtract(const Duration(days: 30)),
-          ))
+          .where('timestamp',
+              isGreaterThan: Timestamp.fromDate(
+                DateTime.now().subtract(const Duration(days: 30)),
+              ))
           .get();
-      
-      final itemsList = items.docs.map((doc) => StockItem.fromFirestore(doc)).toList();
-      final historyList = history.docs.map((doc) => StockHistory.fromFirestore(doc)).toList();
-      
+
+      final itemsList =
+          items.docs.map((doc) => StockItem.fromFirestore(doc)).toList();
+      final historyList =
+          history.docs.map((doc) => StockHistory.fromFirestore(doc)).toList();
+
       // Calculate total stock value (estimated - sum of quantities)
       double totalValue = 0;
       for (var item in itemsList) {
         totalValue += item.quantite;
       }
-      
+
       // Most used products (by output/consumption)
       final productUsage = <String, double>{};
       for (var h in historyList) {
         if (h.type == HistoryType.output) {
-          productUsage[h.stockItemName] = (productUsage[h.stockItemName] ?? 0) + h.quantityChange;
+          productUsage[h.stockItemName] =
+              (productUsage[h.stockItemName] ?? 0) + h.quantityChange;
         }
       }
       final mostUsed = productUsage.entries.toList()
         ..sort((a, b) => b.value.compareTo(a.value));
-      
+
       // Daily consumption (last 30 days)
       final dailyConsumption = <String, double>{};
       for (var h in historyList) {
         if (h.type == HistoryType.output) {
           final dateKey = DateFormat('yyyy-MM-dd').format(h.timestamp);
-          dailyConsumption[dateKey] = (dailyConsumption[dateKey] ?? 0) + h.quantityChange;
+          dailyConsumption[dateKey] =
+              (dailyConsumption[dateKey] ?? 0) + h.quantityChange;
         }
       }
-      
+
       return {
         'totalValue': totalValue,
-        'mostUsedProducts': mostUsed.take(5).map((e) => {'name': e.key, 'quantity': e.value}).toList(),
+        'mostUsedProducts': mostUsed
+            .take(5)
+            .map((e) => {'name': e.key, 'quantity': e.value})
+            .toList(),
         'dailyConsumption': dailyConsumption,
         'totalProducts': itemsList.length,
         'lowStockCount': itemsList.where((item) => item.isLowStock).length,
       };
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error analyzing: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error analyzing: ${e.message ?? e.code}');
     }
   }
 
@@ -408,59 +414,61 @@ class FirestoreService {
       return Stream.error(
           const AppException('auth-required', 'You must be logged in.'));
     }
-    return _firestore
-        .collection('users')
-        .snapshots()
-        .map((snapshot) {
-          final users = snapshot.docs
-              .map((doc) => UserModel.fromFirestore(doc.data(), doc.id))
-              .toList();
-          // Sort by createdAt descending (newest first), with nulls last
-          users.sort((a, b) {
-            if (a.createdAt.isAfter(b.createdAt)) return -1;
-            if (a.createdAt.isBefore(b.createdAt)) return 1;
-            return 0;
-          });
-          return users;
-        });
+    return _firestore.collection('users').snapshots().map((snapshot) {
+      final users = snapshot.docs
+          .map((doc) => UserModel.fromFirestore(doc.data(), doc.id))
+          .toList();
+      // Sort by createdAt descending (newest first), with nulls last
+      users.sort((a, b) {
+        if (a.createdAt.isAfter(b.createdAt)) return -1;
+        if (a.createdAt.isBefore(b.createdAt)) return 1;
+        return 0;
+      });
+      return users;
+    });
   }
 
   // Update user role (admin only)
   Future<void> updateUserRole(String userId, String role) async {
     try {
-      debugPrint('[FirestoreService] updateUserRole called: userId=$userId, role=$role');
-      
+      debugPrint(
+          '[FirestoreService] updateUserRole called: userId=$userId, role=$role');
+
       // Validate role
-      if (role != 'admin' && role != 'employee' && role != 'customer') {
+      if (role != 'admin' && role != 'employee' && role != 'client') {
         debugPrint('[FirestoreService] Invalid role: $role');
-        throw const AppException('invalid-role', 'Invalid role specified. Must be admin, employee, or customer.');
+        throw const AppException('invalid-role',
+            'Invalid role specified. Must be admin, employee, or client.');
       }
-      
+
       // Check admin permission
       final isAdmin = await _isCurrentUserAdmin();
       debugPrint('[FirestoreService] Current user is admin: $isAdmin');
-      
+
       if (!isAdmin) {
         throw const AppException(
             'permission-denied', 'Action reserved for administrators.');
       }
-      
+
       // Update the role
       debugPrint('[FirestoreService] Updating user role in Firestore...');
       await _firestore.collection('users').doc(userId).update({'role': role});
       debugPrint('[FirestoreService] Role updated successfully');
-      
+
       // Verify the update
       final verifyDoc = await _firestore.collection('users').doc(userId).get();
       if (verifyDoc.exists) {
         final updatedRole = verifyDoc.data()?['role'] as String?;
-        debugPrint('[FirestoreService] Verified role in database: $updatedRole');
+        debugPrint(
+            '[FirestoreService] Verified role in database: $updatedRole');
         if (updatedRole != role) {
-          debugPrint('[FirestoreService] WARNING: Role mismatch! Expected: $role, Got: $updatedRole');
+          debugPrint(
+              '[FirestoreService] WARNING: Role mismatch! Expected: $role, Got: $updatedRole');
         }
       }
     } on FirebaseException catch (e) {
-      debugPrint('[FirestoreService] FirebaseException: ${e.code} - ${e.message}');
+      debugPrint(
+          '[FirestoreService] FirebaseException: ${e.code} - ${e.message}');
       throw AppException('firestore', 'Update error: ${e.message ?? e.code}');
     } on AppException {
       rethrow;
@@ -501,17 +509,16 @@ class FirestoreService {
       return Stream.error(
           const AppException('auth-required', 'You must be logged in.'));
     }
-    
+
     Query query = _firestore.collection('orderForecasts');
-    
+
     if (upcomingOnly) {
-      query = query.where('scheduledDate', isGreaterThan: Timestamp.fromDate(DateTime.now()));
+      query = query.where('scheduledDate',
+          isGreaterThan: Timestamp.fromDate(DateTime.now()));
     }
-    
-    return query
-        .orderBy('scheduledDate', descending: false)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
+
+    return query.orderBy('scheduledDate', descending: false).snapshots().map(
+        (snapshot) => snapshot.docs
             .map((doc) => OrderForecast.fromFirestore(doc))
             .toList());
   }
@@ -522,7 +529,10 @@ class FirestoreService {
         throw const AppException(
             'permission-denied', 'Action reserved for administrators.');
       }
-      await _firestore.collection('orderForecasts').doc(forecast.id).update(forecast.toFirestore());
+      await _firestore
+          .collection('orderForecasts')
+          .doc(forecast.id)
+          .update(forecast.toFirestore());
     } on FirebaseException catch (e) {
       throw AppException('firestore', 'Update error: ${e.message ?? e.code}');
     }
@@ -546,16 +556,22 @@ class FirestoreService {
         throw const AppException(
             'permission-denied', 'Action reserved for administrators.');
       }
-      await _firestore.collection('orderForecasts').doc(id).update({'completed': true});
+      await _firestore
+          .collection('orderForecasts')
+          .doc(id)
+          .update({'completed': true});
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error completing: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error completing: ${e.message ?? e.code}');
     }
   }
 
   // ======================= MENU ITEMS =======================
-  Stream<List<MenuItemModel>> getMenuItems({String? category, bool? onlyAvailable}) {
+  Stream<List<MenuItemModel>> getMenuItems(
+      {String? category, bool? onlyAvailable}) {
     if (_auth.currentUser == null) {
-      return Stream.error(const AppException('auth-required', 'You must be logged in.'));
+      return Stream.error(
+          const AppException('auth-required', 'You must be logged in.'));
     }
     Query query = _firestore.collection('menuItems');
     if (category != null && category.isNotEmpty) {
@@ -566,22 +582,22 @@ class FirestoreService {
     }
     // Note: When using where() with orderBy(), Firestore requires a composite index
     // If index doesn't exist, we'll sort in memory instead
-    return query
-        .snapshots()
-        .map((s) {
-          final items = s.docs.map((d) => MenuItemModel.fromFirestore(d)).toList();
-          // Sort by name in memory
-          items.sort((a, b) => a.name.compareTo(b.name));
-          return items;
-        });
+    return query.snapshots().map((s) {
+      final items = s.docs.map((d) => MenuItemModel.fromFirestore(d)).toList();
+      // Sort by name in memory
+      items.sort((a, b) => a.name.compareTo(b.name));
+      return items;
+    });
   }
 
   Future<String> addMenuItem(MenuItemModel item) async {
     try {
       if (!await _isCurrentUserAdmin()) {
-        throw const AppException('permission-denied', 'Action reserved for administrators.');
+        throw const AppException(
+            'permission-denied', 'Action reserved for administrators.');
       }
-      final ref = await _firestore.collection('menuItems').add(item.toFirestore());
+      final ref =
+          await _firestore.collection('menuItems').add(item.toFirestore());
       return ref.id;
     } on FirebaseException catch (e) {
       throw AppException('firestore', 'Error creating: ${e.message ?? e.code}');
@@ -591,9 +607,13 @@ class FirestoreService {
   Future<void> updateMenuItem(MenuItemModel item) async {
     try {
       if (!await _isCurrentUserAdmin()) {
-        throw const AppException('permission-denied', 'Action reserved for administrators.');
+        throw const AppException(
+            'permission-denied', 'Action reserved for administrators.');
       }
-      await _firestore.collection('menuItems').doc(item.id).update(item.toFirestore());
+      await _firestore
+          .collection('menuItems')
+          .doc(item.id)
+          .update(item.toFirestore());
     } on FirebaseException catch (e) {
       throw AppException('firestore', 'Update error: ${e.message ?? e.code}');
     }
@@ -602,7 +622,8 @@ class FirestoreService {
   Future<void> deleteMenuItem(String id) async {
     try {
       if (!await _isCurrentUserAdmin()) {
-        throw const AppException('permission-denied', 'Action reserved for administrators.');
+        throw const AppException(
+            'permission-denied', 'Action reserved for administrators.');
       }
       await _firestore.collection('menuItems').doc(id).delete();
     } on FirebaseException catch (e) {
@@ -614,32 +635,39 @@ class FirestoreService {
   Future<String> createOrder(orders.OrderModel order) async {
     try {
       final uid = await _requireSignedInUid();
-      final ref = await _firestore.collection('orders').add(order.copyWith(
-        customerId: uid,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ).toFirestore());
+      final ref = await _firestore.collection('orders').add(order
+          .copyWith(
+            clientId: uid,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          )
+          .toFirestore());
       return ref.id;
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error creating order: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error creating order: ${e.message ?? e.code}');
     }
   }
 
   Stream<List<orders.OrderModel>> getMyOrders() {
     if (_auth.currentUser == null) {
-      return Stream.error(const AppException('auth-required', 'You must be logged in.'));
+      return Stream.error(
+          const AppException('auth-required', 'You must be logged in.'));
     }
     return _firestore
         .collection('orders')
-        .where('customerId', isEqualTo: _auth.currentUser!.uid)
+        .where('clientId', isEqualTo: _auth.currentUser!.uid)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => orders.OrderModel.fromFirestore(d)).toList());
+        .map((s) =>
+            s.docs.map((d) => orders.OrderModel.fromFirestore(d)).toList());
   }
 
-  Stream<List<orders.OrderModel>> getAllOrdersForEmployees({List<String>? statuses}) {
+  Stream<List<orders.OrderModel>> getAllOrdersForEmployees(
+      {List<String>? statuses}) {
     if (_auth.currentUser == null) {
-      return Stream.error(const AppException('auth-required', 'You must be logged in.'));
+      return Stream.error(
+          const AppException('auth-required', 'You must be logged in.'));
     }
     Query query = _firestore.collection('orders');
     if (statuses != null && statuses.isNotEmpty) {
@@ -649,7 +677,8 @@ class FirestoreService {
         .orderBy('createdAt', descending: true)
         .limit(200)
         .snapshots()
-        .map((s) => s.docs.map((d) => orders.OrderModel.fromFirestore(d)).toList());
+        .map((s) =>
+            s.docs.map((d) => orders.OrderModel.fromFirestore(d)).toList());
   }
 
   Future<void> updateOrderStatus(String id, orders.OrderStatus status) async {
@@ -664,7 +693,10 @@ class FirestoreService {
           final order = orders.OrderModel.fromFirestore(orderDoc);
           final Map<String, _Consumption> toConsume = {};
           for (final orderItem in order.items) {
-            final menuSnap = await _firestore.collection('menuItems').doc(orderItem.menuItemId).get();
+            final menuSnap = await _firestore
+                .collection('menuItems')
+                .doc(orderItem.menuItemId)
+                .get();
             if (!menuSnap.exists) continue;
             final menu = MenuItemModel.fromFirestore(menuSnap);
             for (final ing in menu.recipe) {
@@ -708,7 +740,8 @@ class FirestoreService {
         }
       }
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error updating status: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error updating status: ${e.message ?? e.code}');
     }
   }
 
@@ -730,17 +763,22 @@ class FirestoreService {
             total += (data['rating'] ?? 0).toDouble();
           }
           final avg = total / snap.docs.length;
-          await _firestore.collection('menuItems').doc(feedback.menuItemId).update({'rating': avg});
+          await _firestore
+              .collection('menuItems')
+              .doc(feedback.menuItemId)
+              .update({'rating': avg});
         }
       }
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error submitting feedback: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error submitting feedback: ${e.message ?? e.code}');
     }
   }
 
   Stream<List<fb.FeedbackModel>> getFeedbacks({String? menuItemId}) {
     if (_auth.currentUser == null) {
-      return Stream.error(const AppException('auth-required', 'You must be logged in.'));
+      return Stream.error(
+          const AppException('auth-required', 'You must be logged in.'));
     }
     Query query = _firestore.collection('feedbacks');
     if (menuItemId != null) {
@@ -750,7 +788,8 @@ class FirestoreService {
         .orderBy('createdAt', descending: true)
         .limit(200)
         .snapshots()
-        .map((s) => s.docs.map((d) => fb.FeedbackModel.fromFirestore(d)).toList());
+        .map((s) =>
+            s.docs.map((d) => fb.FeedbackModel.fromFirestore(d)).toList());
   }
 
   // Complaints
@@ -764,15 +803,17 @@ class FirestoreService {
       await docRef.set(data);
       return docRef.id;
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error creating complaint: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error creating complaint: ${e.message ?? e.code}');
     }
   }
 
-  // Get complaints for current user (customer)
+  // Get complaints for current user (client)
   Stream<List<ComplaintModel>> getUserComplaints() {
     final user = _auth.currentUser;
     if (user == null) {
-      return Stream.error(const AppException('auth-required', 'You must be logged in.'));
+      return Stream.error(
+          const AppException('auth-required', 'You must be logged in.'));
     }
     return _firestore
         .collection('complaints')
@@ -796,38 +837,48 @@ class FirestoreService {
   }
 
   // Update complaint status (admin only)
-  Future<void> updateComplaintStatus(String complaintId, ComplaintStatus status, {String? assignedTo}) async {
+  Future<void> updateComplaintStatus(String complaintId, ComplaintStatus status,
+      {String? assignedTo}) async {
     try {
       if (!await _isCurrentUserAdmin()) {
-        throw const AppException('permission-denied', 'Action reserved for administrators.');
+        throw const AppException(
+            'permission-denied', 'Action reserved for administrators.');
       }
       final updateData = <String, dynamic>{
         'status': status.name,
         'updatedAt': FieldValue.serverTimestamp(),
       };
-      if (status == ComplaintStatus.resolved || status == ComplaintStatus.closed) {
+      if (status == ComplaintStatus.resolved ||
+          status == ComplaintStatus.closed) {
         updateData['resolvedAt'] = FieldValue.serverTimestamp();
       }
       if (assignedTo != null) {
         updateData['assignedTo'] = assignedTo;
       }
-      await _firestore.collection('complaints').doc(complaintId).update(updateData);
+      await _firestore
+          .collection('complaints')
+          .doc(complaintId)
+          .update(updateData);
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error updating complaint: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error updating complaint: ${e.message ?? e.code}');
     }
   }
 
-  // Update complaint rating (customer only, after resolution)
-  Future<void> updateComplaintRating(String complaintId, int rating, {String? comment}) async {
+  // Update complaint rating (client only, after resolution)
+  Future<void> updateComplaintRating(String complaintId, int rating,
+      {String? comment}) async {
     try {
       final uid = await _requireSignedInUid();
-      final complaintDoc = await _firestore.collection('complaints').doc(complaintId).get();
+      final complaintDoc =
+          await _firestore.collection('complaints').doc(complaintId).get();
       if (!complaintDoc.exists) {
         throw const AppException('not-found', 'Complaint not found.');
       }
       final data = complaintDoc.data()!;
       if (data['userId'] != uid) {
-        throw const AppException('permission-denied', 'You can only rate your own complaints.');
+        throw const AppException(
+            'permission-denied', 'You can only rate your own complaints.');
       }
       final updateData = <String, dynamic>{
         'rating': rating,
@@ -836,9 +887,13 @@ class FirestoreService {
       if (comment != null && comment.isNotEmpty) {
         updateData['ratingComment'] = comment;
       }
-      await _firestore.collection('complaints').doc(complaintId).update(updateData);
+      await _firestore
+          .collection('complaints')
+          .doc(complaintId)
+          .update(updateData);
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error updating rating: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error updating rating: ${e.message ?? e.code}');
     }
   }
 
@@ -853,7 +908,8 @@ class FirestoreService {
       await docRef.set(data);
       return docRef.id;
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error creating message: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error creating message: ${e.message ?? e.code}');
     }
   }
 
@@ -865,13 +921,13 @@ class FirestoreService {
         .where('complaintID', isEqualTo: complaintId)
         .snapshots()
         .map((snapshot) {
-          final messages = snapshot.docs
-              .map((doc) => ComplaintMessageModel.fromFirestore(doc))
-              .toList();
-          // Sort by createdAt in ascending order (oldest first)
-          messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-          return messages;
-        });
+      final messages = snapshot.docs
+          .map((doc) => ComplaintMessageModel.fromFirestore(doc))
+          .toList();
+      // Sort by createdAt in ascending order (oldest first)
+      messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      return messages;
+    });
   }
 
   // Mark message as read
@@ -882,7 +938,8 @@ class FirestoreService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error marking message as read: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error marking message as read: ${e.message ?? e.code}');
     }
   }
 
@@ -894,7 +951,8 @@ class FirestoreService {
           .collection('messages')
           .where('complaintID', isEqualTo: complaintId)
           .where('isRead', isEqualTo: false)
-          .where('SenderId', isNotEqualTo: uid) // Only mark messages not sent by current user
+          .where('SenderId',
+              isNotEqualTo: uid) // Only mark messages not sent by current user
           .get();
 
       final batch = _firestore.batch();
@@ -906,7 +964,8 @@ class FirestoreService {
       }
       await batch.commit();
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error marking messages as read: ${e.message ?? e.code}');
+      throw AppException('firestore',
+          'Error marking messages as read: ${e.message ?? e.code}');
     }
   }
 
@@ -922,7 +981,8 @@ class FirestoreService {
           .get();
       return snapshot.docs.length;
     } on FirebaseException catch (e) {
-      throw AppException('firestore', 'Error getting unread count: ${e.message ?? e.code}');
+      throw AppException(
+          'firestore', 'Error getting unread count: ${e.message ?? e.code}');
     }
   }
 }
@@ -932,5 +992,9 @@ class _Consumption {
   final String unit;
   final double quantity;
   final String productName;
-  _Consumption({required this.ingredientId, required this.unit, required this.quantity, required this.productName});
+  _Consumption(
+      {required this.ingredientId,
+      required this.unit,
+      required this.quantity,
+      required this.productName});
 }

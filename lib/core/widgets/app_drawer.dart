@@ -18,7 +18,7 @@ class AppDrawer extends StatelessWidget {
         return Colors.orange;
       case 'employee':
         return Colors.green;
-      case 'customer':
+      case 'client':
       default:
         return Colors.blue;
     }
@@ -30,9 +30,9 @@ class AppDrawer extends StatelessWidget {
         return 'Administrator';
       case 'employee':
         return 'Employee';
-      case 'customer':
+      case 'client':
       default:
-        return 'Customer';
+        return 'client';
     }
   }
 
@@ -42,7 +42,7 @@ class AppDrawer extends StatelessWidget {
         return Icons.admin_panel_settings;
       case 'employee':
         return Icons.coffee;
-      case 'customer':
+      case 'client':
       default:
         return Icons.person;
     }
@@ -164,10 +164,13 @@ class AppDrawer extends StatelessWidget {
             stream: FirestoreService().getAllComplaints(),
             builder: (context, snapshot) {
               final complaints = snapshot.data ?? [];
-              final pendingCount = complaints.where((c) => c.status == ComplaintStatus.pending).length;
+              final pendingCount = complaints
+                  .where((c) => c.status == ComplaintStatus.pending)
+                  .length;
               if (pendingCount > 0) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.orange,
                     borderRadius: BorderRadius.circular(12),

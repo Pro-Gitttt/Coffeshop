@@ -9,7 +9,7 @@ class RouteHelper {
         return '/admin/dashboard';
       case 'employee':
         return '/employee/orders';
-      case 'customer':
+      case 'client':
       default:
         return '/user/menu';
     }
@@ -23,4 +23,3 @@ class RouteHelper {
     return getRouteForRole(user.role);
   }
 }
-
