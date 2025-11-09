@@ -13,93 +13,45 @@ class AuthService {
     clientId: kIsWeb ? null : 'YOUR_ANDROID_IOS_CLIENT_ID.apps.googleusercontent.com',
   );
 
-  /// REGISTER USER WITH PHONE VERIFICATION
-  Future<void> registerUserWithPhone(
+  /// REGISTER USER WITH EMAIL & PASSWORD
+  Future<void> registerUserWithEmail(
     BuildContext context, {
     required String name,
     required String email,
     required String password,
-    required String phone,
   }) async {
     try {
-      await _auth.verifyPhoneNumber(
-        phoneNumber: phone,
-        timeout: const Duration(seconds: 60),
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          // Auto verification (rare on Android)
-          final userCredential = await _auth.signInWithCredential(credential);
-          await _saveUserToFirestore(userCredential.user!, name: name, email: email, phone: phone);
-          if (context.mounted) Navigator.pushReplacementNamed(context, '/home');
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Phone verification failed: ${e.message}')),
-            );
-          }
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          _showOtpDialog(context, verificationId, name: name, email: email, password: password, phone: phone);
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {},
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
       );
-    } catch (e) {
+
+      await _saveUserToFirestore(
+        userCredential.user!,
+        name: name,
+        email: email,
+      );
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sending SMS: $e')),
+          const SnackBar(
+            content: Text("Account created successfully! Please log in."),
+            backgroundColor: Colors.green,
+          ),
         );
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = 'Registration failed';
+      if (e.code == 'email-already-in-use') message = 'Email already in use';
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
-  }
-
-  void _showOtpDialog(BuildContext context, String verificationId,
-      {required String name, required String email, required String password, required String phone}) {
-    final TextEditingController otpController = TextEditingController();
-
-    showDialog(
-      barrierDismissible: false,
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: const Text("Enter OTP"),
-        content: TextField(
-          controller: otpController,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: "OTP",
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.brown),
-            onPressed: () async {
-              final otp = otpController.text.trim();
-              if (otp.isEmpty) return;
-              try {
-                final credential = PhoneAuthProvider.credential(
-                    verificationId: verificationId, smsCode: otp);
-
-                // Crée un compte email/password et lie le téléphone
-                final userCredential =
-                    await _auth.createUserWithEmailAndPassword(email: email, password: password);
-
-                await userCredential.user!.linkWithCredential(credential);
-
-                await _saveUserToFirestore(userCredential.user!, name: name, email: email, phone: phone);
-
-                if (context.mounted) Navigator.pushReplacementNamed(context, '/home');
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('OTP verification failed: $e')),
-                );
-              }
-            },
-            child: const Text("Verify"),
-          ),
-        ],
-      ),
-    );
   }
 
   /// LOGIN USER
@@ -109,8 +61,10 @@ class AuthService {
     required String password,
   }) async {
     try {
-      final credential =
-          await _auth.signInWithEmailAndPassword(email: email, password: password);
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
       final doc = await _firestore.collection('users').doc(credential.user!.uid).get();
       final role = doc['role'];
@@ -222,7 +176,7 @@ class AuthService {
   }
 
   /// SAVE USER TO FIRESTORE
-  Future<void> _saveUserToFirestore(User user, {String? name, String? email, String? phone}) async {
+  Future<void> _saveUserToFirestore(User user, {String? name, String? email}) async {
     final userDoc = _firestore.collection('users').doc(user.uid);
     final docSnapshot = await userDoc.get();
 
@@ -230,7 +184,6 @@ class AuthService {
       await userDoc.set({
         'name': name ?? user.displayName ?? '',
         'email': email ?? user.email ?? '',
-        'phone': phone ?? '',
         'photoURL': user.photoURL ?? '',
         'role': 'client',
         'createdAt': DateTime.now(),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
-import 'admin_menu_screen.dart'; // ✅ Add Menu Screen
-import 'char.dart'; // ✅ Statistics Screen
+import 'admin_menu_screen.dart';
+import 'char.dart'; // Statistics screen
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -17,7 +17,7 @@ class _AdminScreenState extends State<AdminScreen> {
 
   void _setScreen(Widget screen) {
     setState(() => _currentScreen = screen);
-    Navigator.pop(context); // close drawer
+    Navigator.pop(context); // Close drawer
   }
 
   void _logout() async {
@@ -49,7 +49,7 @@ class _AdminScreenState extends State<AdminScreen> {
         title: const Text('Admin Dashboard'),
         backgroundColor: Colors.brown,
         actions: [
-          IconButton(icon: const Icon(Icons.logout), onPressed: _logout)
+          IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
         ],
       ),
       drawer: Drawer(
@@ -58,8 +58,10 @@ class _AdminScreenState extends State<AdminScreen> {
           children: [
             const DrawerHeader(
               decoration: BoxDecoration(color: Colors.brown),
-              child: Text("Admin Menu",
-                  style: TextStyle(color: Colors.white, fontSize: 24)),
+              child: Text(
+                "Admin Menu",
+                style: TextStyle(color: Colors.white, fontSize: 24),
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.home),
@@ -89,106 +91,30 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 }
 
-/// Dashboard Home
+/// 🟤 Dashboard Home (with Welcome Message only)
 class DashboardHome extends StatelessWidget {
   const DashboardHome({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Welcome Card
-          Card(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-            color: Colors.brown[700],
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  const Icon(Icons.admin_panel_settings,
-                      size: 50, color: Colors.white),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          "Welcome Back, Admin!",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 5),
-                        Text(
-                          "Manage menus, users, and orders easily.",
-                          style:
-                              TextStyle(color: Colors.white70, fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Quick Action Buttons
-          const Text("Quick Actions",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
-            children: [
-              _buildActionCard(
-                  context, "Add Menu", Icons.add_box, Colors.brown, () {
-                context
-                    .findAncestorStateOfType<_AdminScreenState>()
-                    ?._setScreen(const AdminMenuScreen());
-              }),
-              _buildActionCard(
-                  context, "View All Menus", Icons.list_alt, Colors.teal, () {
-                context
-                    .findAncestorStateOfType<_AdminScreenState>()
-                    ?._setScreen(const AllMenusWidget());
-              }),
-              _buildActionCard(context, "Statistics", Icons.bar_chart,
-                  Colors.purple, () {
-                context
-                    .findAncestorStateOfType<_AdminScreenState>()
-                    ?._setScreen(const AdminStatisticsScreen());
-              }),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionCard(BuildContext context, String title, IconData icon,
-      Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 150,
-        height: 100,
-        decoration:
-            BoxDecoration(color: color, borderRadius: BorderRadius.circular(15)),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: Colors.white),
+            Icon(Icons.admin_panel_settings, size: 100, color: Colors.brown[600]),
+            const SizedBox(height: 20),
+            const Text(
+              "Welcome Back, Admin!",
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 10),
-            Text(title,
-                style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center),
+            const Text(
+              "Use the sidebar to manage menus, view statistics, and control your coffee shop system.",
+              style: TextStyle(fontSize: 16, color: Colors.black54),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
@@ -196,14 +122,15 @@ class DashboardHome extends StatelessWidget {
   }
 }
 
-/// All Menus Widget
+/// 🟤 All Menus List Page
 class AllMenusWidget extends StatelessWidget {
   const AllMenusWidget({super.key});
 
   Future<void> _deleteMenu(String id, BuildContext context) async {
     await FirebaseFirestore.instance.collection('menu').doc(id).delete();
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text("Menu deleted")));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Menu deleted successfully")),
+    );
   }
 
   @override
@@ -236,8 +163,8 @@ class AllMenusWidget extends StatelessWidget {
             return Card(
               margin: const EdgeInsets.symmetric(vertical: 8),
               child: ListTile(
-                leading:
-                    Image.network(imageUrl, width: 60, height: 60, fit: BoxFit.cover),
+                leading: Image.network(imageUrl,
+                    width: 60, height: 60, fit: BoxFit.cover),
                 title: Text(name),
                 subtitle: Text("$price TND\nCategory: $category"),
                 isThreeLine: true,

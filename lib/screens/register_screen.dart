@@ -15,22 +15,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _phoneController = TextEditingController();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
+
+  bool _isValidEmail(String email) {
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    );
+    return emailRegex.hasMatch(email);
+  }
 
   void _register() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
-    await _authService.registerUserWithPhone(
+    await _authService.registerUserWithEmail(
       context,
       name: _nameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
-      phone: _phoneController.text.trim(),
     );
 
     setState(() => _isLoading = false);
@@ -39,7 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true, // scroll when keyboard appears
+      resizeToAvoidBottomInset: true,
       backgroundColor: Colors.grey[100],
       body: SafeArea(
         child: Center(
@@ -60,8 +65,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const Text(
                         "Create Account",
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                            fontSize: 26, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       const Text(
@@ -87,14 +91,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       // Email
                       TextFormField(
                         controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
                         decoration: const InputDecoration(
                           prefixIcon: Icon(Icons.email),
                           labelText: 'Email',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) => value!.contains('@')
-                            ? null
-                            : 'Please enter a valid email',
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your email';
+                          } else if (!_isValidEmail(value)) {
+                            return 'Please enter a valid email (example@mail.com)';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 16),
 
@@ -118,25 +128,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ? 'Password must be at least 6 characters'
                             : null,
                       ),
-                      const SizedBox(height: 16),
-
-                      // Phone
-                      TextFormField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.phone),
-                          labelText: 'Phone Number (+216...)',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty)
-                            return 'Enter your phone number';
-                          if (!RegExp(r'^\+\d{8,15}$').hasMatch(value))
-                            return 'Enter a valid phone number with country code';
-                          return null;
-                        },
-                      ),
                       const SizedBox(height: 24),
 
                       // Register button
@@ -153,8 +144,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               onPressed: _register,
                               child: const Text(
                                 "Register",
-                                style: TextStyle(
-                                    fontSize: 18, color: Colors.white),
+                                style: TextStyle(fontSize: 18, color: Colors.white),
                               ),
                             ),
                       const SizedBox(height: 16),
