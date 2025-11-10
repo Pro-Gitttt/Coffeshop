@@ -15,8 +15,24 @@ class AdminComplaintsScreen extends StatefulWidget {
 }
 
 class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
   ComplaintStatus? _statusFilter;
   ComplaintPriority? _priorityFilter;
+  bool _isMounted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _isMounted = true;
+  }
+
+  @override
+  void dispose() {
+    _isMounted = false;
+    super.dispose();
+  }
+
+  bool get isMounted => _isMounted && mounted;
 
   Color _getStatusColor(ComplaintStatus status) {
     switch (status) {
@@ -42,10 +58,11 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
     }
   }
 
-  Future<void> _updateStatus(ComplaintModel complaint, ComplaintStatus newStatus) async {
+  Future<void> _updateStatus(
+      ComplaintModel complaint, ComplaintStatus newStatus) async {
     try {
-      await FirestoreService().updateComplaintStatus(complaint.id, newStatus);
-      if (mounted) {
+      await _firestoreService.updateComplaintStatus(complaint.id, newStatus);
+      if (isMounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Complaint status updated to ${newStatus.name}'),
@@ -54,7 +71,7 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (isMounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
@@ -66,6 +83,8 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
   }
 
   void _showStatusDialog(ComplaintModel complaint) {
+    if (!isMounted) return;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -74,12 +93,22 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: ComplaintStatus.values.map((status) {
             return ListTile(
-              title: Text(status.name),
+              title: Text(
+                status.name.toUpperCase(),
+                style: TextStyle(
+                  fontWeight: status == complaint.status
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                  color: status == complaint.status
+                      ? _getStatusColor(status)
+                      : null,
+                ),
+              ),
               leading: Radio<ComplaintStatus>(
                 value: status,
                 groupValue: complaint.status,
                 onChanged: (value) {
-                  if (value != null) {
+                  if (value != null && isMounted) {
                     Navigator.pop(context);
                     _updateStatus(complaint, value);
                   }
@@ -88,6 +117,12 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
             );
           }).toList(),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
       ),
     );
   }
@@ -128,7 +163,8 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
                           decoration: const InputDecoration(
                             labelText: 'All Statuses',
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
                           ),
                           items: [
                             const DropdownMenuItem<ComplaintStatus?>(
@@ -138,14 +174,29 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
                             ...ComplaintStatus.values.map((status) {
                               return DropdownMenuItem<ComplaintStatus>(
                                 value: status,
-                                child: Text(status.name),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 12,
+                                      height: 12,
+                                      decoration: BoxDecoration(
+                                        color: _getStatusColor(status),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(status.name),
+                                  ],
+                                ),
                               );
                             }),
                           ],
                           onChanged: (value) {
-                            setState(() {
-                              _statusFilter = value;
-                            });
+                            if (isMounted) {
+                              setState(() {
+                                _statusFilter = value;
+                              });
+                            }
                           },
                         ),
                       ),
@@ -168,7 +219,8 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
                           decoration: const InputDecoration(
                             labelText: 'All Priorities',
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
                           ),
                           items: [
                             const DropdownMenuItem<ComplaintPriority?>(
@@ -178,14 +230,29 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
                             ...ComplaintPriority.values.map((priority) {
                               return DropdownMenuItem<ComplaintPriority>(
                                 value: priority,
-                                child: Text(priority.name),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 12,
+                                      height: 12,
+                                      decoration: BoxDecoration(
+                                        color: _getPriorityColor(priority),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(priority.name),
+                                  ],
+                                ),
                               );
                             }),
                           ],
                           onChanged: (value) {
-                            setState(() {
-                              _priorityFilter = value;
-                            });
+                            if (isMounted) {
+                              setState(() {
+                                _priorityFilter = value;
+                              });
+                            }
                           },
                         ),
                       ),
@@ -197,7 +264,7 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
             // Complaints list
             Expanded(
               child: StreamBuilder<List<ComplaintModel>>(
-                stream: FirestoreService().getAllComplaints(),
+                stream: _firestoreService.getAllComplaints(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const LoadingWidget();
@@ -210,17 +277,22 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
                         children: [
                           Icon(
                             Icons.error_outline,
-                            size: Responsive.responsiveIconSize(context, mobile: 64, tablet: 80, desktop: 96),
+                            size: Responsive.responsiveIconSize(context,
+                                mobile: 64, tablet: 80, desktop: 96),
                             color: theme.colorScheme.error,
                           ),
-                          SizedBox(height: Responsive.responsiveSpacing(context, mobile: 16, tablet: 20, desktop: 24)),
+                          SizedBox(
+                              height: Responsive.responsiveSpacing(context,
+                                  mobile: 16, tablet: 20, desktop: 24)),
                           Padding(
-                            padding: Responsive.responsiveHorizontalPadding(context),
+                            padding:
+                                Responsive.responsiveHorizontalPadding(context),
                             child: Text(
                               'Error: ${snapshot.error}',
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.error,
-                                fontSize: Responsive.responsiveFontSize(context, mobile: 14, tablet: 16, desktop: 18),
+                                fontSize: Responsive.responsiveFontSize(context,
+                                    mobile: 14, tablet: 16, desktop: 18),
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -232,10 +304,12 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
 
                   final allComplaints = snapshot.data ?? [];
                   final filteredComplaints = allComplaints.where((complaint) {
-                    if (_statusFilter != null && complaint.status != _statusFilter) {
+                    if (_statusFilter != null &&
+                        complaint.status != _statusFilter) {
                       return false;
                     }
-                    if (_priorityFilter != null && complaint.priority != _priorityFilter) {
+                    if (_priorityFilter != null &&
+                        complaint.priority != _priorityFilter) {
                       return false;
                     }
                     return true;
@@ -248,15 +322,22 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
                         children: [
                           Icon(
                             Icons.feedback_outlined,
-                            size: Responsive.responsiveIconSize(context, mobile: 80, tablet: 100, desktop: 120),
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                            size: Responsive.responsiveIconSize(context,
+                                mobile: 80, tablet: 100, desktop: 120),
+                            color: theme.colorScheme.onSurface.withOpacity(0.4),
                           ),
-                          SizedBox(height: Responsive.responsiveSpacing(context, mobile: 16, tablet: 20, desktop: 24)),
+                          SizedBox(
+                              height: Responsive.responsiveSpacing(context,
+                                  mobile: 16, tablet: 20, desktop: 24)),
                           Text(
-                            allComplaints.isEmpty ? 'No complaints' : 'No complaints match filters',
+                            allComplaints.isEmpty
+                                ? 'No complaints'
+                                : 'No complaints match filters',
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                              fontSize: Responsive.responsiveFontSize(context, mobile: 18, tablet: 20, desktop: 24),
+                              color:
+                                  theme.colorScheme.onSurface.withOpacity(0.6),
+                              fontSize: Responsive.responsiveFontSize(context,
+                                  mobile: 18, tablet: 20, desktop: 24),
                             ),
                           ),
                         ],
@@ -273,16 +354,22 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
                           itemCount: filteredComplaints.length,
                           itemBuilder: (context, index) {
                             return Padding(
-                              padding: EdgeInsets.only(bottom: Responsive.responsiveSpacing(context)),
+                              padding: EdgeInsets.only(
+                                  bottom:
+                                      Responsive.responsiveSpacing(context)),
                               child: _ComplaintCard(
+                                key: ValueKey(filteredComplaints[index].id),
                                 complaint: filteredComplaints[index],
-                                onStatusUpdate: () => _showStatusDialog(filteredComplaints[index]),
+                                onStatusUpdate: () => _showStatusDialog(
+                                    filteredComplaints[index]),
                                 onTap: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/user/complaint-detail',
-                                    arguments: filteredComplaints[index],
-                                  );
+                                  if (context.mounted) {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/admin/complaint-detail',
+                                      arguments: filteredComplaints[index],
+                                    );
+                                  }
                                 },
                                 getStatusColor: _getStatusColor,
                                 getPriorityColor: _getPriorityColor,
@@ -292,26 +379,39 @@ class _AdminComplaintsScreenState extends State<AdminComplaintsScreen> {
                         );
                       }
                       // Grid layout for tablet/desktop
-                      final crossAxisCount = Responsive.responsiveColumnCount(context, mobile: 1, tablet: 2, desktop: 3);
+                      final crossAxisCount = Responsive.responsiveColumnCount(
+                          context,
+                          mobile: 1,
+                          tablet: 2,
+                          desktop: 3);
                       return GridView.builder(
                         padding: Responsive.responsivePadding(context),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: Responsive.responsiveSpacing(context, mobile: 12, tablet: 16, desktop: 20),
-                          mainAxisSpacing: Responsive.responsiveSpacing(context, mobile: 12, tablet: 16, desktop: 20),
+                          crossAxisSpacing: Responsive.responsiveSpacing(
+                              context,
+                              mobile: 12,
+                              tablet: 16,
+                              desktop: 20),
+                          mainAxisSpacing: Responsive.responsiveSpacing(context,
+                              mobile: 12, tablet: 16, desktop: 20),
                           childAspectRatio: 1.1,
                         ),
                         itemCount: filteredComplaints.length,
                         itemBuilder: (context, index) {
                           return _ComplaintCard(
+                            key: ValueKey(filteredComplaints[index].id),
                             complaint: filteredComplaints[index],
-                            onStatusUpdate: () => _showStatusDialog(filteredComplaints[index]),
+                            onStatusUpdate: () =>
+                                _showStatusDialog(filteredComplaints[index]),
                             onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/user/complaint-detail',
-                                arguments: filteredComplaints[index],
-                              );
+                              if (context.mounted) {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/admin/complaint-detail',
+                                  arguments: filteredComplaints[index],
+                                );
+                              }
                             },
                             getStatusColor: _getStatusColor,
                             getPriorityColor: _getPriorityColor,
@@ -338,12 +438,84 @@ class _ComplaintCard extends StatelessWidget {
   final Color Function(ComplaintPriority) getPriorityColor;
 
   const _ComplaintCard({
+    super.key,
     required this.complaint,
     required this.onStatusUpdate,
     required this.onTap,
     required this.getStatusColor,
     required this.getPriorityColor,
   });
+
+  void _showMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                complaint.title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.visibility, color: Colors.blue),
+              title: const Text('View Details'),
+              onTap: () {
+                Navigator.pop(context);
+                onTap();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.update, color: Colors.orange),
+              title: const Text('Update Status'),
+              onTap: () {
+                Navigator.pop(context);
+                onStatusUpdate();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.message, color: Colors.green),
+              title: const Text('Send Message'),
+              onTap: () {
+                Navigator.pop(context);
+                // TODO: Implement send message functionality
+                _showMessageDialog(context);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showMessageDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Send Message'),
+        content: const Text('Message functionality will be implemented here.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -357,15 +529,16 @@ class _ComplaintCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: statusColor.withValues(alpha: 0.3),
+          color: statusColor.withOpacity(0.3),
           width: 2,
         ),
       ),
       child: InkWell(
         onTap: onTap,
+        onLongPress: () => _showMenu(context),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: Responsive.responsivePadding(context),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -381,92 +554,142 @@ class _ComplaintCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  PopupMenuButton(
+                  // Three dots menu button
+                  IconButton(
                     icon: const Icon(Icons.more_vert),
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'update_status',
-                        child: Row(
-                          children: [
-                            Icon(Icons.update, size: 20),
-                            SizedBox(width: 8),
-                            Text('Update Status'),
-                          ],
-                        ),
-                      ),
-                    ],
-                    onSelected: (value) {
-                      if (value == 'update_status') {
-                        onStatusUpdate();
-                      }
-                    },
+                    onPressed: () => _showMenu(context),
+                    iconSize: 20,
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 36, minHeight: 36),
                   ),
                 ],
               ),
-              SizedBox(height: Responsive.responsiveSpacing(context, mobile: 8)),
+              const SizedBox(height: 8),
               Text(
                 complaint.description,
                 style: theme.textTheme.bodySmall,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
-              SizedBox(height: Responsive.responsiveSpacing(context, mobile: 12)),
+              const SizedBox(height: 12),
               Wrap(
-                spacing: Responsive.responsiveSpacing(context, mobile: 8),
-                runSpacing: Responsive.responsiveSpacing(context, mobile: 8),
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.2),
+                      color: statusColor.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      complaint.statusLabel,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: statusColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _getStatusIcon(complaint.status),
+                          size: 14,
+                          color: statusColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          complaint.statusLabel,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: statusColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: priorityColor.withValues(alpha: 0.2),
+                      color: priorityColor.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      complaint.priorityLabel,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: priorityColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.priority_high,
+                          size: 14,
+                          color: priorityColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          complaint.priorityLabel,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: priorityColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: Responsive.responsiveSpacing(context, mobile: 12)),
-              Text(
-                'Created: ${dateFormat.format(complaint.createdAt)}',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-              if (complaint.resolvedAt != null)
-                Padding(
-                  padding: EdgeInsets.only(top: Responsive.responsiveSpacing(context, mobile: 4)),
-                  child: Text(
-                    'Resolved: ${dateFormat.format(complaint.resolvedAt!)}',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: Colors.green,
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(
+                    Icons.access_time,
+                    size: 14,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Created: ${dateFormat.format(complaint.createdAt)}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                ],
+              ),
+              if (complaint.resolvedAt != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle,
+                      size: 14,
+                      color: Colors.green,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'Resolved: ${dateFormat.format(complaint.resolvedAt!)}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: Colors.green,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
+              ],
             ],
           ),
         ),
       ),
     );
   }
-}
 
+  IconData _getStatusIcon(ComplaintStatus status) {
+    switch (status) {
+      case ComplaintStatus.pending:
+        return Icons.pending;
+      case ComplaintStatus.inProgress:
+        return Icons.build;
+      case ComplaintStatus.resolved:
+        return Icons.check_circle;
+      case ComplaintStatus.closed:
+        return Icons.archive;
+    }
+  }
+}

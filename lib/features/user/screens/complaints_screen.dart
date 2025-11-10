@@ -71,17 +71,22 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                         children: [
                           Icon(
                             Icons.error_outline,
-                            size: Responsive.responsiveIconSize(context, mobile: 64, tablet: 80, desktop: 96),
+                            size: Responsive.responsiveIconSize(context,
+                                mobile: 64, tablet: 80, desktop: 96),
                             color: theme.colorScheme.error,
                           ),
-                          SizedBox(height: Responsive.responsiveSpacing(context, mobile: 16, tablet: 20, desktop: 24)),
+                          SizedBox(
+                              height: Responsive.responsiveSpacing(context,
+                                  mobile: 16, tablet: 20, desktop: 24)),
                           Padding(
-                            padding: Responsive.responsiveHorizontalPadding(context),
+                            padding:
+                                Responsive.responsiveHorizontalPadding(context),
                             child: Text(
                               'Error: ${snapshot.error}',
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.error,
-                                fontSize: Responsive.responsiveFontSize(context, mobile: 14, tablet: 16, desktop: 18),
+                                fontSize: Responsive.responsiveFontSize(context,
+                                    mobile: 14, tablet: 16, desktop: 18),
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -100,28 +105,36 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                         children: [
                           Icon(
                             Icons.feedback_outlined,
-                            size: Responsive.responsiveIconSize(context, mobile: 80, tablet: 100, desktop: 120),
+                            size: Responsive.responsiveIconSize(context,
+                                mobile: 80, tablet: 100, desktop: 120),
                             color: theme.colorScheme.onSurface
                                 .withValues(alpha: 0.4),
                           ),
-                          SizedBox(height: Responsive.responsiveSpacing(context, mobile: 16, tablet: 20, desktop: 24)),
+                          SizedBox(
+                              height: Responsive.responsiveSpacing(context,
+                                  mobile: 16, tablet: 20, desktop: 24)),
                           Text(
                             'No complaints',
                             style: theme.textTheme.titleMedium?.copyWith(
                               color: theme.colorScheme.onSurface
                                   .withValues(alpha: 0.6),
-                              fontSize: Responsive.responsiveFontSize(context, mobile: 18, tablet: 20, desktop: 24),
+                              fontSize: Responsive.responsiveFontSize(context,
+                                  mobile: 18, tablet: 20, desktop: 24),
                             ),
                           ),
-                          SizedBox(height: Responsive.responsiveSpacing(context, mobile: 8)),
+                          SizedBox(
+                              height: Responsive.responsiveSpacing(context,
+                                  mobile: 8)),
                           Padding(
-                            padding: Responsive.responsiveHorizontalPadding(context),
+                            padding:
+                                Responsive.responsiveHorizontalPadding(context),
                             child: Text(
                               'Submit a complaint if you have any issues',
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.onSurface
                                     .withValues(alpha: 0.6),
-                                fontSize: Responsive.responsiveFontSize(context, mobile: 14, tablet: 16, desktop: 18),
+                                fontSize: Responsive.responsiveFontSize(context,
+                                    mobile: 14, tablet: 16, desktop: 18),
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -140,20 +153,32 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                           itemCount: complaints.length,
                           itemBuilder: (context, index) {
                             return Padding(
-                              padding: EdgeInsets.only(bottom: Responsive.responsiveSpacing(context)),
-                              child: _ComplaintCard(complaint: complaints[index]),
+                              padding: EdgeInsets.only(
+                                  bottom:
+                                      Responsive.responsiveSpacing(context)),
+                              child:
+                                  _ComplaintCard(complaint: complaints[index]),
                             );
                           },
                         );
                       }
                       // Grid layout for tablet/desktop
-                      final crossAxisCount = Responsive.responsiveColumnCount(context, mobile: 1, tablet: 2, desktop: 3);
+                      final crossAxisCount = Responsive.responsiveColumnCount(
+                          context,
+                          mobile: 1,
+                          tablet: 2,
+                          desktop: 3);
                       return GridView.builder(
                         padding: Responsive.responsivePadding(context),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: Responsive.responsiveSpacing(context, mobile: 12, tablet: 16, desktop: 20),
-                          mainAxisSpacing: Responsive.responsiveSpacing(context, mobile: 12, tablet: 16, desktop: 20),
+                          crossAxisSpacing: Responsive.responsiveSpacing(
+                              context,
+                              mobile: 12,
+                              tablet: 16,
+                              desktop: 20),
+                          mainAxisSpacing: Responsive.responsiveSpacing(context,
+                              mobile: 12, tablet: 16, desktop: 20),
                           childAspectRatio: 1.2,
                         ),
                         itemCount: complaints.length,

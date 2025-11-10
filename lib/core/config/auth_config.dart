@@ -5,7 +5,7 @@
 // Firestore document has no role yet. Useful for initial bootstrap.
 const List<String> kAdminEmails = <String>[
   // Add your admin emails here
-  'medkhalilmannai@gmail.com',
+  'karimtorjmen67@gmail.com',
 ];
 
 bool isAdminEmail(String? email) {

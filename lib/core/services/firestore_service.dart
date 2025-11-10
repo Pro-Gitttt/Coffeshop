@@ -943,6 +943,61 @@ class FirestoreService {
     }
   }
 
+
+// Delete complaint (user can delete their own, admin can delete any)
+Future<void> deleteComplaint(String complaintId) async {
+  try {
+    final uid = await _requireSignedInUid();
+    
+    // Get the complaint first to check ownership
+    final complaintDoc = await _firestore.collection('complaints').doc(complaintId).get();
+    if (!complaintDoc.exists) {
+      throw const AppException('not-found', 'Complaint not found.');
+    }
+    
+    final complaintData = complaintDoc.data()!;
+    final complaintUserId = complaintData['userId'] as String?;
+    
+    // Check if user owns the complaint or is admin
+    final isAdmin = await _isCurrentUserAdmin();
+    if (complaintUserId != uid && !isAdmin) {
+      throw const AppException(
+          'permission-denied', 'You can only delete your own complaints.');
+    }
+
+    // Delete associated messages first
+    final messagesSnapshot = await _firestore
+        .collection('messages')
+        .where('complaintID', isEqualTo: complaintId)
+        .get();
+
+    // Use batch to delete all messages and the complaint
+    final batch = _firestore.batch();
+    
+    // Delete all messages
+    for (final messageDoc in messagesSnapshot.docs) {
+      batch.delete(messageDoc.reference);
+    }
+    
+    // Delete the complaint
+    batch.delete(_firestore.collection('complaints').doc(complaintId));
+    
+    await batch.commit();
+
+    // Verify deletion
+    final verifyDoc = await _firestore.collection('complaints').doc(complaintId).get();
+    if (verifyDoc.exists) {
+      throw const AppException('firestore', 'Complaint deletion was not confirmed.');
+    }
+
+  } on AppException {
+    rethrow;
+  } on FirebaseException catch (e) {
+    throw AppException('firestore', 'Error deleting complaint: ${e.message ?? e.code}');
+  } catch (e) {
+    throw const AppException('unknown', 'Error deleting complaint');
+  }
+}
   // Mark all messages for a complaint as read
   Future<void> markComplaintMessagesAsRead(String complaintId) async {
     try {
